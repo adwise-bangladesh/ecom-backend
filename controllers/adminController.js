@@ -536,3 +536,69 @@ exports.addOrderLog = async (req, res) => {
     });
   }
 };
+
+// @desc    Bulk assign courier to orders
+// @route   POST /api/v1/admin/orders/bulk-assign-courier
+// @access  Private/Admin
+exports.bulkAssignCourier = async (req, res) => {
+  try {
+    const { orderIds, courierInfo } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order IDs are required'
+      });
+    }
+    
+    if (!courierInfo.courierName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Courier name is required'
+      });
+    }
+    
+    const updateData = {
+      courierName: courierInfo.courierName,
+      trackingNumber: courierInfo.trackingNumber || '',
+      courierNotes: courierInfo.notes || '',
+      status: 'shipped', // Automatically update status to shipped
+      updatedAt: new Date()
+    };
+    
+    // Add history entry for each order
+    const historyEntry = {
+      action: 'courier_assigned',
+      timestamp: new Date(),
+      updatedBy: req.user._id,
+      notes: `Courier assigned: ${courierInfo.courierName}${courierInfo.trackingNumber ? ` (Tracking: ${courierInfo.trackingNumber})` : ''}${courierInfo.notes ? ` - ${courierInfo.notes}` : ''}`
+    };
+    
+    const bulkOps = orderIds.map(orderId => ({
+      updateOne: {
+        filter: { _id: orderId },
+        update: {
+          $set: updateData,
+          $push: { history: historyEntry }
+        }
+      }
+    }));
+    
+    const result = await Order.bulkWrite(bulkOps);
+    
+    res.status(200).json({
+      success: true,
+      message: `Courier assigned to ${result.modifiedCount} orders successfully`,
+      data: {
+        modifiedCount: result.modifiedCount,
+        courierInfo
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error assigning courier to orders',
+      error: error.message
+    });
+  }
+};

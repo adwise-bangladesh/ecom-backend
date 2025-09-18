@@ -59,6 +59,7 @@ router.get('/admin/orders/:id', adminAuth, adminController.getOrderDetails);
 router.put('/admin/orders/:id/status', adminAuth, adminController.updateOrderStatus);
 router.put('/admin/orders/:id', adminAuth, adminController.updateOrder);
 router.post('/admin/orders/:id/log', adminAuth, adminController.addOrderLog);
+router.post('/admin/orders/bulk-assign-courier', adminAuth, adminController.bulkAssignCourier);
 router.get('/admin/users', adminAuth, adminController.getUsers);
 
 module.exports = router;

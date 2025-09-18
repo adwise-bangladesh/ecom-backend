@@ -86,6 +86,18 @@ const orderSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  courierName: {
+    type: String,
+    trim: true
+  },
+  trackingNumber: {
+    type: String,
+    trim: true
+  },
+  courierNotes: {
+    type: String,
+    trim: true
+  },
   history: [{
     action: {
       type: String,
