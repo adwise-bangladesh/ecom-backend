@@ -41,6 +41,6 @@ router.post('/checkout', validateOrder, handleValidationErrors, orderController.
 router.post('/seed', productController.seedDatabase);
 
 // Protected routes
-router.get('/user/orders', protect, orderController.getUserOrders);
+router.get('/user/orders', orderController.getUserOrders);
 
 module.exports = router;

@@ -42,13 +42,19 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Create order
+    // Create order with simplified shipping info
     const order = await Order.create({
       user: userId,
       sessionId: sessionId,
       items: orderItems,
       total,
-      shippingInfo,
+      shippingInfo: {
+        name: shippingInfo.name,
+        phone: shippingInfo.phone,
+        address: shippingInfo.address,
+        city: shippingInfo.city || 'Dhaka', // Default city
+        pincode: shippingInfo.pincode || '1000' // Default pincode
+      },
       paymentMethod: 'COD',
       status: 'pending'
     });
@@ -90,17 +96,31 @@ exports.createOrder = async (req, res) => {
 // @access  Private
 exports.getUserOrders = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user ? req.user._id : null;
+    const sessionId = req.headers['x-session-id'] || null;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const orders = await Order.find({ user: userId })
+    // Build query to find orders by user ID or session ID
+    let query = {};
+    if (userId) {
+      query = { user: userId };
+    } else if (sessionId) {
+      query = { sessionId: sessionId };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No user or session found'
+      });
+    }
+
+    const orders = await Order.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Order.countDocuments({ user: userId });
+    const total = await Order.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({
