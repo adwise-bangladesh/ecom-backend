@@ -28,6 +28,10 @@ const shippingInfoSchema = new mongoose.Schema({
     required: [true, 'Phone is required'],
     match: [/^[0-9]{10,11}$/, 'Please enter a valid phone number (10-11 digits)']
   },
+  secondaryPhone: {
+    type: String,
+    match: [/^[0-9]{10,11}$/, 'Please enter a valid phone number (10-11 digits)']
+  },
   address: {
     type: String,
     required: [true, 'Address is required'],
