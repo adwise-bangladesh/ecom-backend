@@ -10,6 +10,14 @@ exports.createOrder = async (req, res) => {
     const { items, shippingInfo } = req.body;
     const userId = req.user ? req.user._id : null;
     const sessionId = req.headers['x-session-id'] || null;
+    
+    // Debug logging
+    console.log('Order creation debug:', {
+      userId: userId,
+      sessionId: sessionId,
+      hasUser: !!req.user,
+      userEmail: req.user?.email
+    });
 
     // Validate items and calculate total
     let total = 0;

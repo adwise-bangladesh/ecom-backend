@@ -9,7 +9,7 @@ const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
 
 // Import middleware
-const { protect } = require('../middleware/auth');
+const { protect, optionalAuth } = require('../middleware/auth');
 const {
   validateUser,
   validateLogin,
@@ -25,22 +25,22 @@ router.get('/products', productController.getProducts);
 router.get('/products/:slug', productController.getProduct);
 router.get('/products/:slug/related', productController.getRelatedProducts);
 
-// Cart routes (public - works with session)
-router.post('/cart', validateCart, handleValidationErrors, cartController.addToCart);
-router.get('/cart', cartController.getCart);
-router.delete('/cart/:slug', cartController.removeFromCart);
+// Cart routes (optional auth - works with both user and session)
+router.post('/cart', optionalAuth, validateCart, handleValidationErrors, cartController.addToCart);
+router.get('/cart', optionalAuth, cartController.getCart);
+router.delete('/cart/:slug', optionalAuth, cartController.removeFromCart);
 
 // Auth routes
 router.post('/auth/register', validateUser, handleValidationErrors, authController.register);
 router.post('/auth/login', validateLogin, handleValidationErrors, authController.login);
 
-// Checkout route (public - works with session)
-router.post('/checkout', validateOrder, handleValidationErrors, orderController.createOrder);
+// Checkout route (optional auth - works with both user and session)
+router.post('/checkout', optionalAuth, validateOrder, handleValidationErrors, orderController.createOrder);
 
 // Seed database endpoint (for development/production seeding)
 router.post('/seed', productController.seedDatabase);
 
 // Protected routes
-router.get('/user/orders', orderController.getUserOrders);
+router.get('/user/orders', optionalAuth, orderController.getUserOrders);
 
 module.exports = router;
