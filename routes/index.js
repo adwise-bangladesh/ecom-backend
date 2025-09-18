@@ -37,6 +37,9 @@ router.post('/auth/login', validateLogin, handleValidationErrors, authController
 // Checkout route (public - works with session)
 router.post('/checkout', validateOrder, handleValidationErrors, orderController.createOrder);
 
+// Seed database endpoint (for development/production seeding)
+router.post('/seed', productController.seedDatabase);
+
 // Protected routes
 router.get('/user/orders', protect, orderController.getUserOrders);
 
