@@ -11,6 +11,13 @@ exports.createOrder = async (req, res) => {
     const userId = req.user ? req.user._id : null;
     const sessionId = req.headers['x-session-id'] || null;
     
+    // Ensure we have either userId or sessionId
+    let finalSessionId = sessionId;
+    if (!userId && !sessionId) {
+      // Generate a session ID if none exists
+      finalSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
 
     // Validate items and calculate total
     let total = 0;
@@ -50,7 +57,7 @@ exports.createOrder = async (req, res) => {
     // Create order with simplified shipping info
     const order = await Order.create({
       user: userId,
-      sessionId: sessionId,
+      sessionId: finalSessionId,
       items: orderItems,
       subtotal: total,
       shippingCost: shippingCost,
@@ -74,11 +81,11 @@ exports.createOrder = async (req, res) => {
     }
 
     // Clear cart
-    if (userId || sessionId) {
+    if (userId || finalSessionId) {
       await Cart.findOneAndDelete({
         $or: [
           { user: userId },
-          { sessionId: sessionId }
+          { sessionId: finalSessionId }
         ]
       });
     }
