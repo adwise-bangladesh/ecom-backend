@@ -7,9 +7,11 @@ const productController = require('../controllers/productController');
 const categoryController = require('../controllers/categoryController');
 const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
+const adminController = require('../controllers/adminController');
 
 // Import middleware
 const { protect, optionalAuth } = require('../middleware/auth');
+const { adminAuth } = require('../middleware/adminAuth');
 const {
   validateUser,
   validateLogin,
@@ -45,5 +47,15 @@ router.post('/seed', productController.seedDatabase);
 
 // Protected routes
 router.get('/user/orders', optionalAuth, orderController.getUserOrders);
+
+// Admin routes
+router.get('/admin/dashboard', adminAuth, adminController.getDashboardStats);
+router.get('/admin/products', adminAuth, adminController.getProducts);
+router.post('/admin/products', adminAuth, adminController.createProduct);
+router.put('/admin/products/:id', adminAuth, adminController.updateProduct);
+router.delete('/admin/products/:id', adminAuth, adminController.deleteProduct);
+router.get('/admin/orders', adminAuth, adminController.getOrders);
+router.get('/admin/orders/:id', adminAuth, adminController.getOrderDetails);
+router.put('/admin/orders/:id/status', adminAuth, adminController.updateOrderStatus);
 
 module.exports = router;
