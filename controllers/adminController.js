@@ -120,9 +120,30 @@ exports.getProducts = async (req, res) => {
 // @access  Private/Admin
 exports.createProduct = async (req, res) => {
   try {
+    console.log('Creating product with data:', req.body);
+    
+    // Validate required fields
+    const { title, description, price, category, images } = req.body;
+    
+    if (!title || !description || !price || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, description, price, and category are required'
+      });
+    }
+    
+    if (!images || images.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one image is required'
+      });
+    }
+    
     const product = await Product.create(req.body);
     
     await product.populate('category', 'name slug');
+    
+    console.log('Product created successfully:', product._id);
     
     res.status(201).json({
       success: true,
@@ -130,7 +151,27 @@ exports.createProduct = async (req, res) => {
       data: product
     });
   } catch (error) {
-    res.status(400).json({
+    console.error('Error creating product:', error);
+    
+    // Handle duplicate slug error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'A product with this title already exists. Please choose a different title.'
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors
+      });
+    }
+    
+    res.status(500).json({
       success: false,
       message: 'Error creating product',
       error: error.message
