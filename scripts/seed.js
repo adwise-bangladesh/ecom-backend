@@ -73,7 +73,11 @@ const products = [
       'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=600&h=600&fit=crop'
     ],
+    regularPrice: 2299,
     price: 1999,
+    costPrice: 1600,
+    wholesalePrice: 1800,
+    resellPrice: 1900,
     stock: 20
   },
   {
@@ -99,7 +103,11 @@ const products = [
       'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop'
     ],
+    regularPrice: 200,
     price: 180,
+    costPrice: 120,
+    wholesalePrice: 140,
+    resellPrice: 150,
     stock: 75
   },
   {
@@ -110,7 +118,11 @@ const products = [
       'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&h=600&fit=crop'
     ],
+    regularPrice: 30,
     price: 25,
+    costPrice: 15,
+    wholesalePrice: 18,
+    resellPrice: 20,
     stock: 200
   },
   {
@@ -121,7 +133,11 @@ const products = [
       'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&h=600&fit=crop'
     ],
+    regularPrice: 100,
     price: 80,
+    costPrice: 50,
+    wholesalePrice: 60,
+    resellPrice: 65,
     stock: 150
   },
   {
@@ -132,7 +148,11 @@ const products = [
       'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1559056199-641a0ac8c55f?w=600&h=600&fit=crop'
     ],
+    regularPrice: 150,
     price: 120,
+    costPrice: 80,
+    wholesalePrice: 95,
+    resellPrice: 105,
     stock: 40
   },
   {
@@ -143,7 +163,11 @@ const products = [
       'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1506629905607-0b2b4b0b0b0b?w=600&h=600&fit=crop'
     ],
+    regularPrice: 60,
     price: 45,
+    costPrice: 25,
+    wholesalePrice: 32,
+    resellPrice: 35,
     stock: 80
   },
   {
@@ -154,7 +178,11 @@ const products = [
       'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop'
     ],
+    regularPrice: 45,
     price: 35,
+    costPrice: 20,
+    wholesalePrice: 25,
+    resellPrice: 28,
     stock: 60
   }
 ];
