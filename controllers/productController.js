@@ -13,7 +13,7 @@ exports.getHomeData = async (req, res) => {
       .populate('category', 'name slug')
       .sort({ createdAt: -1 })
       .limit(8)
-      .select('title slug images price category createdAt');
+      .select('title slug images price regularPrice category createdAt');
 
     // Get all categories
     const categories = await Category.find()
@@ -111,7 +111,7 @@ exports.getProducts = async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .select('title slug description images price stock category createdAt');
+      .select('title slug description images price regularPrice stock category createdAt');
 
     const total = await Product.countDocuments(filter);
     const totalPages = Math.ceil(total / limit);
@@ -186,7 +186,7 @@ exports.getRelatedProducts = async (req, res) => {
     })
       .populate('category', 'name slug')
       .limit(4)
-      .select('title slug images price category');
+      .select('title slug images price regularPrice category');
 
     res.status(200).json({
       success: true,

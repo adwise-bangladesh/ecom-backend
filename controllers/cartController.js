@@ -109,7 +109,7 @@ exports.getCart = async (req, res) => {
       cart.items.map(async (item) => {
         const product = await Product.findOne({ slug: item.productSlug })
           .populate('category', 'name slug')
-          .select('title slug images price stock category');
+          .select('title slug images price regularPrice stock category');
         
         if (!product) {
           console.log(`Product not found for slug: ${item.productSlug}`);

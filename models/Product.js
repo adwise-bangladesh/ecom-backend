@@ -22,10 +22,33 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   }],
+  // Customer-facing prices
+  regularPrice: {
+    type: Number,
+    required: [true, 'Regular price is required'],
+    min: [0, 'Regular price cannot be negative']
+  },
   price: {
     type: Number,
-    required: [true, 'Product price is required'],
+    required: [true, 'Product price (offer price) is required'],
     min: [0, 'Price cannot be negative']
+  },
+  
+  // Business pricing (internal use)
+  costPrice: {
+    type: Number,
+    required: [true, 'Cost price is required'],
+    min: [0, 'Cost price cannot be negative']
+  },
+  wholesalePrice: {
+    type: Number,
+    required: [true, 'Wholesale price is required'],
+    min: [0, 'Wholesale price cannot be negative']
+  },
+  resellPrice: {
+    type: Number,
+    required: [true, 'Resell price is required'],
+    min: [0, 'Resell price cannot be negative']
   },
   stock: {
     type: Number,
@@ -46,6 +69,7 @@ const productSchema = new mongoose.Schema({
 productSchema.index({ slug: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ price: 1 });
+productSchema.index({ regularPrice: 1 });
 productSchema.index({ createdAt: -1 });
 
 // Virtual for category slug
