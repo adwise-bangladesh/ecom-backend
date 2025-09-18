@@ -53,12 +53,6 @@ exports.optionalAuth = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
     }
 
-    console.log('Optional auth debug:', {
-      hasAuthHeader: !!req.headers.authorization,
-      hasToken: !!token,
-      sessionId: req.headers['x-session-id']
-    });
-
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -66,11 +60,9 @@ exports.optionalAuth = async (req, res, next) => {
         
         if (user) {
           req.user = user;
-          console.log('User authenticated:', user.email);
         }
       } catch (error) {
         // Token is invalid, but we continue without user
-        console.log('Invalid token in optional auth:', error.message);
       }
     }
 

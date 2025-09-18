@@ -11,13 +11,6 @@ exports.createOrder = async (req, res) => {
     const userId = req.user ? req.user._id : null;
     const sessionId = req.headers['x-session-id'] || null;
     
-    // Debug logging
-    console.log('Order creation debug:', {
-      userId: userId,
-      sessionId: sessionId,
-      hasUser: !!req.user,
-      userEmail: req.user?.email
-    });
 
     // Validate items and calculate total
     let total = 0;
@@ -50,12 +43,19 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Calculate shipping cost
+    const shippingCost = shippingInfo.shippingMethod === 'inside-dhaka' ? 80 : 130;
+    const finalTotal = total + shippingCost;
+
     // Create order with simplified shipping info
     const order = await Order.create({
       user: userId,
       sessionId: sessionId,
       items: orderItems,
-      total,
+      subtotal: total,
+      shippingCost: shippingCost,
+      shippingMethod: shippingInfo.shippingMethod,
+      total: finalTotal,
       shippingInfo: {
         name: shippingInfo.name,
         phone: shippingInfo.phone,

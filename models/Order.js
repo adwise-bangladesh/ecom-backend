@@ -56,6 +56,21 @@ const orderSchema = new mongoose.Schema({
     required: false // For anonymous users
   },
   items: [orderItemSchema],
+  subtotal: {
+    type: Number,
+    required: [true, 'Subtotal amount is required'],
+    min: [0, 'Subtotal cannot be negative']
+  },
+  shippingCost: {
+    type: Number,
+    required: [true, 'Shipping cost is required'],
+    min: [0, 'Shipping cost cannot be negative']
+  },
+  shippingMethod: {
+    type: String,
+    enum: ['inside-dhaka', 'outside-dhaka'],
+    required: [true, 'Shipping method is required']
+  },
   total: {
     type: Number,
     required: [true, 'Total amount is required'],
