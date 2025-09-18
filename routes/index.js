@@ -25,6 +25,9 @@ router.get('/products', productController.getProducts);
 router.get('/products/:slug', productController.getProduct);
 router.get('/products/:slug/related', productController.getRelatedProducts);
 
+// Development/Admin routes
+router.post('/update-pricing', productController.updateProductPricing);
+
 // Cart routes (optional auth - works with both user and session)
 router.post('/cart', optionalAuth, validateCart, handleValidationErrors, cartController.addToCart);
 router.get('/cart', optionalAuth, cartController.getCart);
