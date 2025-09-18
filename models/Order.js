@@ -26,22 +26,12 @@ const shippingInfoSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: [true, 'Phone is required'],
-    match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
+    match: [/^[0-9]{10,11}$/, 'Please enter a valid phone number (10-11 digits)']
   },
   address: {
     type: String,
     required: [true, 'Address is required'],
     trim: true
-  },
-  city: {
-    type: String,
-    required: [true, 'City is required'],
-    trim: true
-  },
-  pincode: {
-    type: String,
-    required: [true, 'Pincode is required'],
-    match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
   }
 });
 

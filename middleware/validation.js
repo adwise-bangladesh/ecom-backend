@@ -97,17 +97,10 @@ exports.validateOrder = [
     .isLength({ min: 2 })
     .withMessage('Name must be at least 2 characters'),
   body('shippingInfo.phone')
-    .matches(/^[0-9]{10}$/)
-    .withMessage('Please provide a valid 10-digit phone number'),
+    .matches(/^[0-9]{10,11}$/)
+    .withMessage('Please provide a valid phone number (10-11 digits)'),
   body('shippingInfo.address')
     .trim()
     .isLength({ min: 10 })
-    .withMessage('Address must be at least 10 characters'),
-  body('shippingInfo.city')
-    .trim()
-    .isLength({ min: 2 })
-    .withMessage('City must be at least 2 characters'),
-  body('shippingInfo.pincode')
-    .matches(/^[0-9]{6}$/)
-    .withMessage('Please provide a valid 6-digit pincode')
+    .withMessage('Address must be at least 10 characters')
 ];

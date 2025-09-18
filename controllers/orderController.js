@@ -59,9 +59,7 @@ exports.createOrder = async (req, res) => {
       shippingInfo: {
         name: shippingInfo.name,
         phone: shippingInfo.phone,
-        address: shippingInfo.address,
-        city: shippingInfo.city || 'Dhaka', // Default city
-        pincode: shippingInfo.pincode || '1000' // Default pincode
+        address: shippingInfo.address
       },
       paymentMethod: 'COD',
       status: 'pending'
