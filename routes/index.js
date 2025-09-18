@@ -57,5 +57,8 @@ router.delete('/admin/products/:id', adminAuth, adminController.deleteProduct);
 router.get('/admin/orders', adminAuth, adminController.getOrders);
 router.get('/admin/orders/:id', adminAuth, adminController.getOrderDetails);
 router.put('/admin/orders/:id/status', adminAuth, adminController.updateOrderStatus);
+router.put('/admin/orders/:id', adminAuth, adminController.updateOrder);
+router.post('/admin/orders/:id/log', adminAuth, adminController.addOrderLog);
+router.get('/admin/users', adminAuth, adminController.getUsers);
 
 module.exports = router;

@@ -76,7 +76,32 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
-  }
+  },
+  discount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Discount cannot be negative']
+  },
+  notes: {
+    type: String,
+    trim: true
+  },
+  history: [{
+    action: {
+      type: String,
+      required: true
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    changes: [String],
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    notes: String
+  }]
 }, {
   timestamps: true
 });

@@ -318,3 +318,180 @@ exports.getOrderDetails = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all users
+// @route   GET /api/v1/admin/users
+// @access  Private/Admin
+exports.getUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    
+    const skip = (page - 1) * limit;
+    
+    // Build search query
+    const searchQuery = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+    
+    const users = await User.find(searchQuery)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const totalUsers = await User.countDocuments(searchQuery);
+    const totalPages = Math.ceil(totalUsers / limit);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        users,
+        totalUsers,
+        totalPages,
+        currentPage: page
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching users',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Update order details (products, pricing, shipping, discounts)
+// @route   PUT /api/v1/admin/orders/:id
+// @access  Private/Admin
+exports.updateOrder = async (req, res) => {
+  try {
+    const { items, shippingInfo, shippingCost, shippingMethod, discount, notes } = req.body;
+    
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Update order fields
+    const updateData = {};
+    
+    if (items) {
+      updateData.items = items;
+      // Recalculate totals
+      let subtotal = 0;
+      for (const item of items) {
+        const product = await Product.findOne({ slug: item.productSlug });
+        if (product) {
+          subtotal += product.price * item.quantity;
+        }
+      }
+      updateData.subtotal = subtotal;
+    }
+    
+    if (shippingInfo) {
+      updateData.shippingInfo = { ...order.shippingInfo, ...shippingInfo };
+    }
+    
+    if (shippingCost !== undefined) {
+      updateData.shippingCost = shippingCost;
+    }
+    
+    if (shippingMethod) {
+      updateData.shippingMethod = shippingMethod;
+    }
+    
+    if (discount !== undefined) {
+      updateData.discount = discount;
+    }
+    
+    if (notes) {
+      updateData.notes = notes;
+    }
+    
+    // Recalculate total
+    const newSubtotal = updateData.subtotal || order.subtotal;
+    const newShippingCost = updateData.shippingCost || order.shippingCost;
+    const newDiscount = updateData.discount || order.discount || 0;
+    updateData.total = newSubtotal + newShippingCost - newDiscount;
+    
+    // Add to order history
+    const historyEntry = {
+      action: 'order_updated',
+      timestamp: new Date(),
+      changes: Object.keys(updateData),
+      updatedBy: req.user._id,
+      notes: notes || 'Order updated by admin'
+    };
+    
+    updateData.history = [...(order.history || []), historyEntry];
+    
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('user', 'name email');
+    
+    res.status(200).json({
+      success: true,
+      message: 'Order updated successfully',
+      data: updatedOrder
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating order',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Add manual log to order
+// @route   POST /api/v1/admin/orders/:id/log
+// @access  Private/Admin
+exports.addOrderLog = async (req, res) => {
+  try {
+    const { action, notes } = req.body;
+    
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    const logEntry = {
+      action: action || 'manual_log',
+      timestamp: new Date(),
+      updatedBy: req.user._id,
+      notes: notes || 'Manual log entry'
+    };
+    
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id,
+      { $push: { history: logEntry } },
+      { new: true }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Log added successfully',
+      data: updatedOrder
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error adding log',
+      error: error.message
+    });
+  }
+};
