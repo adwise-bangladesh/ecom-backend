@@ -111,17 +111,21 @@ exports.getCart = async (req, res) => {
           .populate('category', 'name slug')
           .select('title slug images price stock category');
         
+        if (!product) {
+          console.log(`Product not found for slug: ${item.productSlug}`);
+        }
+        
         return {
           productSlug: item.productSlug,
           quantity: item.quantity,
-          product
+          product: product || null
         };
       })
     );
 
     // Calculate total
     const total = cartItems.reduce((sum, item) => {
-      return sum + (item.product.price * item.quantity);
+      return sum + ((item.product?.price || 0) * item.quantity);
     }, 0);
 
     res.status(200).json({
