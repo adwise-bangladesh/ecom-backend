@@ -6,9 +6,14 @@ const Product = require('../models/Product');
 // @access  Public
 exports.getCategories = async (req, res) => {
   try {
-    const { includeHierarchy, parentId, level } = req.query;
+    const { includeHierarchy, parentId, level, page, limit, search, status } = req.query;
     
-    let query = { isActive: true };
+    let query = {};
+    
+    // For public API, only show active categories
+    if (!req.user || !req.user.role || req.user.role !== 'admin') {
+      query.isActive = true;
+    }
     
     // Filter by parent
     if (parentId) {
@@ -20,10 +25,36 @@ exports.getCategories = async (req, res) => {
       query.level = parseInt(level);
     }
     
+    // Filter by status (admin only)
+    if (status && status !== 'all' && req.user && req.user.role === 'admin') {
+      query.isActive = status === 'active';
+    }
+    
+    // Search filter
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { name: searchRegex },
+        { description: searchRegex },
+        { slug: searchRegex }
+      ];
+    }
+    
+    // Pagination
+    const pageNumber = parseInt(page) || 1;
+    const limitNumber = parseInt(limit) || 10;
+    const skip = (pageNumber - 1) * limitNumber;
+    
     let categories = await Category.find(query)
       .populate('parent', 'name slug')
       .sort({ level: 1, displayOrder: 1, name: 1 })
-      .select('name slug image banner description level parent displayOrder productCount isActive showOnHomepage');
+      .skip(skip)
+      .limit(limitNumber)
+      .select('name slug image banner description level parent displayOrder productCount isActive showOnHomepage createdAt updatedAt');
+
+    // Get total count for pagination
+    const totalCategories = await Category.countDocuments(query);
+    const totalPages = Math.ceil(totalCategories / limitNumber);
 
     // Build hierarchy if requested
     if (includeHierarchy === 'true') {
@@ -33,7 +64,14 @@ exports.getCategories = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        categories: categories
+        categories: categories,
+        pagination: {
+          currentPage: pageNumber,
+          totalPages,
+          totalCategories,
+          hasNextPage: pageNumber < totalPages,
+          hasPrevPage: pageNumber > 1
+        }
       }
     });
   } catch (error) {
