@@ -176,8 +176,15 @@ exports.createCategory = async (req, res) => {
       }
     }
 
+    // Generate slug from name
+    const slug = name.trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
     const categoryData = {
       name: name.trim(),
+      slug: slug,
       description: description?.trim() || '',
       parent: parent || null,
       image: image || '',
@@ -275,7 +282,14 @@ exports.updateCategory = async (req, res) => {
 
     // Update category
     const updateData = {};
-    if (name !== undefined) updateData.name = name.trim();
+    if (name !== undefined) {
+      updateData.name = name.trim();
+      // Generate new slug when name changes
+      updateData.slug = name.trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
     if (description !== undefined) updateData.description = description.trim();
     if (parent !== undefined) updateData.parent = parent || null;
     if (image !== undefined) updateData.image = image;

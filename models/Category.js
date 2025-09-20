@@ -63,7 +63,7 @@ categorySchema.virtual('parentCategory', {
 
 // Pre-save middleware to generate slug
 categorySchema.pre('save', function(next) {
-  if (this.isModified('name') && !this.slug) {
+  if (!this.slug || this.isModified('name')) {
     this.slug = this.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
