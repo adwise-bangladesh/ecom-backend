@@ -1,11 +1,36 @@
 const mongoose = require('mongoose');
 const ProductAttribute = require('../models/ProductAttribute');
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 
-// Connect to MongoDB
+// Load environment variables from the env file
+const envPath = path.join(__dirname, '../env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const equalIndex = trimmedLine.indexOf('=');
+      if (equalIndex > 0) {
+        const key = trimmedLine.substring(0, equalIndex);
+        const value = trimmedLine.substring(equalIndex + 1);
+        if (key && value) {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+}
+
+// Debug: Show the MongoDB URI being used
+console.log('MongoDB URI:', process.env.MONGODB_URI ? 'Found in env' : 'Using localhost');
+
+// Connect to MongoDB with longer timeout
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 30000, // 30 seconds
+  socketTimeoutMS: 45000, // 45 seconds
 });
 
 const sampleAttributes = [
