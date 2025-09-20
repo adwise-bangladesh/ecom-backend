@@ -1,98 +1,71 @@
 const Category = require('../models/Category');
-const Product = require('../models/Product');
 
-// @desc    Get all categories with hierarchy
-// @route   GET /api/v1/categories
-// @access  Public
+// Get all categories (public)
 exports.getCategories = async (req, res) => {
   try {
-    const { includeHierarchy, parentId, level, page, limit, search, status } = req.query;
+    const { page = 1, limit = 20, search, parent, isActive } = req.query;
     
-    let query = {};
+    const query = {};
     
-    // For public API, only show active categories
-    // For admin API, show all categories (active and inactive)
-    if (!req.user || !req.user.role || req.user.role !== 'admin') {
-      query.isActive = true;
-    }
-    // If admin, show all categories regardless of status
-    
-    // Filter by parent
-    if (parentId) {
-      query.parent = parentId === 'null' ? null : parentId;
-    }
-    
-    // Filter by level
-    if (level !== undefined) {
-      query.level = parseInt(level);
-    }
-    
-    // Filter by status (admin only)
-    if (status && status !== 'all' && req.user && req.user.role === 'admin') {
-      query.isActive = status === 'active';
-    }
-    
-    // Search filter
     if (search) {
-      const searchRegex = new RegExp(search, 'i');
       query.$or = [
-        { name: searchRegex },
-        { description: searchRegex },
-        { slug: searchRegex }
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
-    // Pagination
-    const pageNumber = parseInt(page) || 1;
-    const limitNumber = parseInt(limit) || 10;
-    const skip = (pageNumber - 1) * limitNumber;
-    
-    let categories = await Category.find(query)
-      .populate('parent', 'name slug')
-      .sort({ level: 1, displayOrder: 1, name: 1 })
-      .skip(skip)
-      .limit(limitNumber)
-      .select('name slug image banner description level parent displayOrder productCount isActive showOnHomepage createdAt updatedAt');
-
-    // Get total count for pagination
-    const totalCategories = await Category.countDocuments(query);
-    const totalPages = Math.ceil(totalCategories / limitNumber);
-
-    // Build hierarchy if requested
-    if (includeHierarchy === 'true') {
-      categories = buildCategoryHierarchy(categories);
+    if (parent !== undefined) {
+      if (parent === 'null' || parent === '') {
+        query.parent = null;
+      } else {
+        query.parent = parent;
+      }
     }
+    
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    const categories = await Category.find(query)
+      .populate('parentCategory', 'name slug')
+      .populate('children', 'name slug isActive')
+      .sort({ level: 1, name: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Category.countDocuments(query);
 
     res.status(200).json({
       success: true,
       data: {
-        categories: categories,
+        categories,
         pagination: {
-          currentPage: pageNumber,
-          totalPages,
-          totalCategories,
-          hasNextPage: pageNumber < totalPages,
-          hasPrevPage: pageNumber > 1
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalCategories: total,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
         }
       }
     });
   } catch (error) {
+    console.error('Error fetching categories:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching categories',
+      message: 'Failed to fetch categories',
       error: error.message
     });
   }
 };
 
-// @desc    Get single category
-// @route   GET /api/v1/categories/:slug
-// @access  Public
+// Get single category by slug (public)
 exports.getCategory = async (req, res) => {
   try {
-    const category = await Category.findOne({ slug: req.params.slug, isActive: true })
-      .populate('parent', 'name slug')
-      .populate('children');
+    const { slug } = req.params;
+    
+    const category = await Category.findOne({ slug, isActive: true })
+      .populate('parentCategory', 'name slug')
+      .populate('children', 'name slug isActive');
 
     if (!category) {
       return res.status(404).json({
@@ -101,82 +74,162 @@ exports.getCategory = async (req, res) => {
       });
     }
 
-    // Get ancestors for breadcrumb
-    const ancestors = await category.getAncestors();
-    
-    // Get children
-    const children = await Category.find({ parent: category._id, isActive: true })
-      .sort({ displayOrder: 1, name: 1 });
-
     res.status(200).json({
       success: true,
-      data: {
-        category: {
-          ...category.toObject(),
-          ancestors,
-          children
-        }
-      }
+      data: { category }
     });
   } catch (error) {
+    console.error('Error fetching category:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching category',
+      message: 'Failed to fetch category',
       error: error.message
     });
   }
 };
 
-// @desc    Create new category
-// @route   POST /api/v1/admin/categories
-// @access  Private/Admin
+// Admin: Get all categories with pagination and filters
+exports.getAdminCategories = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, status } = req.query;
+    
+    const query = {};
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status && status !== 'all') {
+      query.isActive = status === 'active';
+    }
+
+    const categories = await Category.find(query)
+      .populate('parentCategory', 'name slug')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Category.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        categories,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalCategories: total,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin categories:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch categories',
+      error: error.message
+    });
+  }
+};
+
+// Admin: Create new category
 exports.createCategory = async (req, res) => {
   try {
-    const category = await Category.create(req.body);
-    
-    await category.populate('parent', 'name slug');
+    const { name, description, parent, image, isActive = true } = req.body;
+
+    // Validate required fields
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category name is required',
+        errors: ['Category name is required']
+      });
+    }
+
+    // Check if category with same name already exists
+    const existingCategory = await Category.findOne({ 
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category with this name already exists',
+        errors: ['Category with this name already exists']
+      });
+    }
+
+    // Validate parent category if provided
+    if (parent) {
+      const parentCategory = await Category.findById(parent);
+      if (!parentCategory) {
+        return res.status(400).json({
+          success: false,
+          message: 'Parent category not found',
+          errors: ['Parent category not found']
+        });
+      }
+    }
+
+    const categoryData = {
+      name: name.trim(),
+      description: description?.trim() || '',
+      parent: parent || null,
+      image: image || '',
+      isActive
+    };
+
+    const category = new Category(categoryData);
+    await category.save();
+
+    // Populate parent category for response
+    await category.populate('parentCategory', 'name slug');
 
     res.status(201).json({
       success: true,
       message: 'Category created successfully',
-      data: category
+      data: { category }
     });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Category with this name or slug already exists'
-      });
-    }
+    console.error('Error creating category:', error);
     
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
-        errors: errors
+        message: 'Validation failed',
+        errors
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category with this slug already exists',
+        errors: ['Category with this slug already exists']
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Error creating category',
+      message: 'Failed to create category',
       error: error.message
     });
   }
 };
 
-// @desc    Update category
-// @route   PUT /api/v1/admin/categories/:id
-// @access  Private/Admin
+// Admin: Update category
 exports.updateCategory = async (req, res) => {
   try {
-    const category = await Category.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('parent', 'name slug');
+    const { id } = req.params;
+    const { name, description, parent, image, isActive } = req.body;
 
+    const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -184,27 +237,95 @@ exports.updateCategory = async (req, res) => {
       });
     }
 
+    // Check if category with same name already exists (excluding current category)
+    if (name && name.trim() !== category.name) {
+      const existingCategory = await Category.findOne({ 
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+        _id: { $ne: id }
+      });
+
+      if (existingCategory) {
+        return res.status(400).json({
+          success: false,
+          message: 'Category with this name already exists',
+          errors: ['Category with this name already exists']
+        });
+      }
+    }
+
+    // Validate parent category if provided
+    if (parent && parent !== category.parent?.toString()) {
+      if (parent === category._id.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Category cannot be its own parent',
+          errors: ['Category cannot be its own parent']
+        });
+      }
+
+      const parentCategory = await Category.findById(parent);
+      if (!parentCategory) {
+        return res.status(400).json({
+          success: false,
+          message: 'Parent category not found',
+          errors: ['Parent category not found']
+        });
+      }
+    }
+
+    // Update category
+    const updateData = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description.trim();
+    if (parent !== undefined) updateData.parent = parent || null;
+    if (image !== undefined) updateData.image = image;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const updatedCategory = await Category.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('parentCategory', 'name slug');
+
     res.status(200).json({
       success: true,
       message: 'Category updated successfully',
-      data: category
+      data: { category: updatedCategory }
     });
   } catch (error) {
-    res.status(400).json({
+    console.error('Error updating category:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category with this slug already exists',
+        errors: ['Category with this slug already exists']
+      });
+    }
+
+    res.status(500).json({
       success: false,
-      message: 'Error updating category',
+      message: 'Failed to update category',
       error: error.message
     });
   }
 };
 
-// @desc    Delete category
-// @route   DELETE /api/v1/admin/categories/:id
-// @access  Private/Admin
+// Admin: Delete category
 exports.deleteCategory = async (req, res) => {
   try {
-    const category = await Category.findById(req.params.id);
+    const { id } = req.params;
 
+    const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -213,98 +334,57 @@ exports.deleteCategory = async (req, res) => {
     }
 
     // Check if category has children
-    const children = await Category.find({ parent: category._id });
-    if (children.length > 0) {
+    const childrenCount = await Category.countDocuments({ parent: id });
+    if (childrenCount > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete category with subcategories. Please delete subcategories first.'
+        message: 'Cannot delete category with subcategories',
+        errors: ['Cannot delete category with subcategories. Please delete or move subcategories first.']
       });
     }
 
-    // Check if category has products
-    const productCount = await Product.countDocuments({ 
-      $or: [
-        { primaryCategory: category._id },
-        { categories: category._id }
-      ]
-    });
-
-    if (productCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete category with ${productCount} products. Please move or delete products first.`
-      });
-    }
-
-    await Category.findByIdAndDelete(req.params.id);
+    await Category.findByIdAndDelete(id);
 
     res.status(200).json({
       success: true,
       message: 'Category deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting category:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting category',
+      message: 'Failed to delete category',
       error: error.message
     });
   }
 };
 
-// @desc    Check slug availability
-// @route   GET /api/v1/admin/categories/check-slug/:slug
-// @access  Private/Admin
+// Admin: Check slug availability
 exports.checkSlugAvailability = async (req, res) => {
   try {
     const { slug } = req.params;
     const { excludeId } = req.query;
-    
-    let query = { slug };
+
+    const query = { slug };
     if (excludeId) {
       query._id = { $ne: excludeId };
     }
-    
+
     const existingCategory = await Category.findOne(query);
-    
+
     res.status(200).json({
       success: true,
       data: {
         available: !existingCategory,
-        slug: slug
+        slug
       }
     });
   } catch (error) {
+    console.error('Error checking slug availability:', error);
     res.status(500).json({
       success: false,
-      message: 'Error checking slug availability',
+      message: 'Failed to check slug availability',
       error: error.message
     });
   }
 };
-
-// Helper function to build category hierarchy
-function buildCategoryHierarchy(categories) {
-  const categoryMap = new Map();
-  const rootCategories = [];
-
-  // Create a map for quick lookup
-  categories.forEach(category => {
-    categoryMap.set(category._id.toString(), { ...category.toObject(), children: [] });
-  });
-
-  // Build the hierarchy
-  categories.forEach(category => {
-    const categoryObj = categoryMap.get(category._id.toString());
-    
-    if (category.parent) {
-      const parent = categoryMap.get(category.parent._id.toString());
-      if (parent) {
-        parent.children.push(categoryObj);
-      }
-    } else {
-      rootCategories.push(categoryObj);
-    }
-  });
-
-  return rootCategories;
-}
