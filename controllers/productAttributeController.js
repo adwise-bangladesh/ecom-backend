@@ -102,9 +102,40 @@ exports.getProductAttribute = async (req, res) => {
 // @access  Private/Admin
 exports.createProductAttribute = async (req, res) => {
   try {
+    const { name, values, isActive } = req.body;
+
+    // Input validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attribute name is required'
+      });
+    }
+
+    if (!values || !Array.isArray(values) || values.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one attribute value is required'
+      });
+    }
+
+    // Sanitize input
+    const sanitizedName = name.trim();
+    const sanitizedValues = values.filter(val => val.value && val.value.trim()).map(val => ({
+      value: val.value.trim(),
+      label: val.label ? val.label.trim() : val.value.trim()
+    }));
+
+    if (sanitizedValues.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one valid attribute value is required'
+      });
+    }
+
     // Check if attribute name already exists
     const existingAttribute = await ProductAttribute.findOne({ 
-      name: { $regex: new RegExp(`^${req.body.name}$`, 'i') } 
+      name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } 
     });
 
     if (existingAttribute) {
@@ -114,7 +145,11 @@ exports.createProductAttribute = async (req, res) => {
       });
     }
 
-    const attribute = await ProductAttribute.create(req.body);
+    const attribute = await ProductAttribute.create({
+      name: sanitizedName,
+      values: sanitizedValues,
+      isActive: isActive !== undefined ? isActive : true
+    });
 
     res.status(201).json({
       success: true,

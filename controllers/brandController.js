@@ -4,7 +4,7 @@ const Product = require('../models/Product');
 // @desc    Get all brands
 // @route   GET /api/v1/brands
 // @access  Public
-const getBrands = async (req, res) => {
+exports.getBrands = async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -78,7 +78,7 @@ const getBrands = async (req, res) => {
 // @desc    Get single brand
 // @route   GET /api/v1/brands/:id
 // @access  Public
-const getBrand = async (req, res) => {
+exports.getBrand = async (req, res) => {
   try {
     const brand = await Brand.findById(req.params.id);
 
@@ -106,7 +106,7 @@ const getBrand = async (req, res) => {
 // @desc    Create brand
 // @route   POST /api/v1/admin/brands
 // @access  Private/Admin
-const createBrand = async (req, res) => {
+exports.createBrand = async (req, res) => {
   try {
     const {
       name,
@@ -118,9 +118,31 @@ const createBrand = async (req, res) => {
       seo
     } = req.body;
 
+    // Input validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Brand name is required'
+      });
+    }
+
+    // Sanitize input
+    const sanitizedName = name.trim();
+    const sanitizedDescription = description ? description.trim() : '';
+    const sanitizedWebsite = website ? website.trim() : '';
+    const sanitizedDisplayOrder = parseInt(displayOrder) || 0;
+
+    // Validate website URL if provided
+    if (sanitizedWebsite && !/^https?:\/\/.+/.test(sanitizedWebsite)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Website must be a valid URL starting with http:// or https://'
+      });
+    }
+
     // Check if brand name already exists
     const existingBrand = await Brand.findOne({ 
-      name: { $regex: new RegExp(`^${name}$`, 'i') } 
+      name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } 
     });
 
     if (existingBrand) {
@@ -131,12 +153,12 @@ const createBrand = async (req, res) => {
     }
 
     const brand = new Brand({
-      name,
-      description,
+      name: sanitizedName,
+      description: sanitizedDescription,
       logo,
-      website,
-      isActive,
-      displayOrder,
+      website: sanitizedWebsite,
+      isActive: isActive !== undefined ? isActive : true,
+      displayOrder: sanitizedDisplayOrder,
       seo
     });
 
@@ -177,7 +199,7 @@ const createBrand = async (req, res) => {
 // @desc    Update brand
 // @route   PUT /api/v1/admin/brands/:id
 // @access  Private/Admin
-const updateBrand = async (req, res) => {
+exports.updateBrand = async (req, res) => {
   try {
     const {
       name,
@@ -259,7 +281,7 @@ const updateBrand = async (req, res) => {
 // @desc    Delete brand
 // @route   DELETE /api/v1/admin/brands/:id
 // @access  Private/Admin
-const deleteBrand = async (req, res) => {
+exports.deleteBrand = async (req, res) => {
   try {
     const brand = await Brand.findById(req.params.id);
 
@@ -301,10 +323,10 @@ const deleteBrand = async (req, res) => {
 // @desc    Get brands for dropdown/select
 // @route   GET /api/v1/brands/dropdown
 // @access  Public
-const getBrandsDropdown = async (req, res) => {
+exports.getBrandsDropdown = async (req, res) => {
   try {
     const brands = await Brand.find({ isActive: true })
-      .select('_id name slug')
+      .select('_id name')
       .sort({ displayOrder: 1, name: 1 })
       .lean();
 
@@ -325,7 +347,7 @@ const getBrandsDropdown = async (req, res) => {
 // @desc    Update brand product count
 // @route   PUT /api/v1/admin/brands/:id/update-product-count
 // @access  Private/Admin
-const updateProductCount = async (req, res) => {
+exports.updateProductCount = async (req, res) => {
   try {
     const brand = await Brand.findById(req.params.id);
 
@@ -359,12 +381,3 @@ const updateProductCount = async (req, res) => {
   }
 };
 
-module.exports = {
-  getBrands,
-  getBrand,
-  createBrand,
-  updateBrand,
-  deleteBrand,
-  getBrandsDropdown,
-  updateProductCount
-};

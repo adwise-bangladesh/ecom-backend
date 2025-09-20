@@ -122,19 +122,47 @@ exports.getUnit = async (req, res) => {
 // @access  Private/Admin
 exports.createUnit = async (req, res) => {
   try {
-    // Check if unit name already exists
-    const existingUnit = await Unit.findOne({ 
-      name: { $regex: new RegExp(`^${req.body.name}$`, 'i') } 
+    const { name, symbol, isActive } = req.body;
+
+    // Input validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unit name is required'
+      });
+    }
+
+    if (!symbol || !symbol.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unit symbol is required'
+      });
+    }
+
+    // Sanitize input
+    const sanitizedName = name.trim();
+    const sanitizedSymbol = symbol.trim();
+
+    // Check if unit name or symbol already exists
+    const existingUnit = await Unit.findOne({
+      $or: [
+        { name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } },
+        { symbol: { $regex: new RegExp(`^${sanitizedSymbol}$`, 'i') } }
+      ]
     });
 
     if (existingUnit) {
       return res.status(400).json({
         success: false,
-        message: 'Unit with this name already exists'
+        message: 'Unit with this name or symbol already exists'
       });
     }
 
-    const unit = await Unit.create(req.body);
+    const unit = await Unit.create({
+      name: sanitizedName,
+      symbol: sanitizedSymbol,
+      isActive: isActive !== undefined ? isActive : true
+    });
 
     res.status(201).json({
       success: true,

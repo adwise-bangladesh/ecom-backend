@@ -10,7 +10,9 @@ const unitSchema = new mongoose.Schema({
   },
   symbol: {
     type: String,
+    required: [true, 'Unit symbol is required'],
     trim: true,
+    unique: true,
     maxlength: [10, 'Unit symbol cannot exceed 10 characters']
   },
   isActive: {
@@ -25,6 +27,7 @@ const unitSchema = new mongoose.Schema({
 
 // Index for better performance
 unitSchema.index({ name: 1 });
+unitSchema.index({ symbol: 1 });
 unitSchema.index({ isActive: 1 });
 
 // Static method to get active units
