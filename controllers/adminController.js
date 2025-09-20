@@ -249,6 +249,37 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
+// @desc    Check product slug availability
+// @route   GET /api/v1/admin/products/check-slug/:slug
+// @access  Private/Admin
+exports.checkProductSlugAvailability = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { excludeId } = req.query;
+    
+    let query = { slug };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+    
+    const existingProduct = await Product.findOne(query);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        available: !existingProduct,
+        slug: slug
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error checking slug availability',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Get all orders for admin
 // @route   GET /api/v1/admin/orders
 // @access  Private/Admin
