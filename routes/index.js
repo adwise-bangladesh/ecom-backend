@@ -7,6 +7,7 @@ const productController = require('../controllers/productController');
 const categoryController = require('../controllers/categoryController');
 const productAttributeController = require('../controllers/productAttributeController');
 const brandController = require('../controllers/brandController');
+const unitController = require('../controllers/unitController');
 const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
 const adminController = require('../controllers/adminController');
@@ -29,6 +30,9 @@ router.get('/categories/:slug', categoryController.getCategory);
 router.get('/brands', brandController.getBrands);
 router.get('/brands/dropdown', brandController.getBrandsDropdown);
 router.get('/brands/:id', brandController.getBrand);
+router.get('/units', unitController.getUnits);
+router.get('/units/dropdown', unitController.getUnitsDropdown);
+router.get('/units/:id', unitController.getUnit);
 router.get('/products', productController.getProducts);
 router.get('/products/:slug', productController.getProduct);
 router.get('/products/:slug/related', productController.getRelatedProducts);
@@ -75,7 +79,6 @@ router.post('/admin/product-attributes', adminAuth, productAttributeController.c
 router.get('/admin/product-attributes/:id', adminAuth, productAttributeController.getProductAttribute);
 router.put('/admin/product-attributes/:id', adminAuth, productAttributeController.updateProductAttribute);
 router.delete('/admin/product-attributes/:id', adminAuth, productAttributeController.deleteProductAttribute);
-router.get('/admin/product-attributes/check-slug/:slug', adminAuth, productAttributeController.checkSlugAvailability);
 
 // Admin routes - Orders
 router.get('/admin/orders', adminAuth, adminController.getOrders);
@@ -91,8 +94,14 @@ router.post('/admin/brands', adminAuth, brandController.createBrand);
 router.get('/admin/brands/:id', adminAuth, brandController.getBrand);
 router.put('/admin/brands/:id', adminAuth, brandController.updateBrand);
 router.delete('/admin/brands/:id', adminAuth, brandController.deleteBrand);
-router.get('/admin/brands/check-slug/:slug', adminAuth, brandController.checkSlugAvailability);
 router.put('/admin/brands/:id/update-product-count', adminAuth, brandController.updateProductCount);
+
+// Admin routes - Units
+router.get('/admin/units', adminAuth, unitController.getUnits);
+router.post('/admin/units', adminAuth, unitController.createUnit);
+router.get('/admin/units/:id', adminAuth, unitController.getUnit);
+router.put('/admin/units/:id', adminAuth, unitController.updateUnit);
+router.delete('/admin/units/:id', adminAuth, unitController.deleteUnit);
 
 // Admin routes - Users
 router.get('/admin/users', adminAuth, adminController.getUsers);

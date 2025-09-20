@@ -297,36 +297,6 @@ const deleteBrand = async (req, res) => {
 };
 
 // @desc    Check brand slug availability
-// @route   GET /api/v1/admin/brands/check-slug/:slug
-// @access  Private/Admin
-const checkSlugAvailability = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const { excludeId } = req.query;
-
-    let query = { slug };
-    if (excludeId) {
-      query._id = { $ne: excludeId };
-    }
-
-    const existingBrand = await Brand.findOne(query);
-
-    res.json({
-      success: true,
-      data: {
-        available: !existingBrand,
-        slug: slug
-      }
-    });
-  } catch (error) {
-    console.error('Error checking slug availability:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error checking slug availability',
-      error: error.message
-    });
-  }
-};
 
 // @desc    Get brands for dropdown/select
 // @route   GET /api/v1/brands/dropdown
@@ -395,7 +365,6 @@ module.exports = {
   createBrand,
   updateBrand,
   deleteBrand,
-  checkSlugAvailability,
   getBrandsDropdown,
   updateProductCount
 };

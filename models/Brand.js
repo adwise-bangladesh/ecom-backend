@@ -7,12 +7,6 @@ const brandSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Brand name cannot exceed 100 characters']
   },
-  slug: {
-    type: String,
-    unique: true,
-    lowercase: true,
-    trim: true
-  },
   description: {
     type: String,
     trim: true,
@@ -73,21 +67,9 @@ const brandSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Create slug from name before saving
-brandSchema.pre('save', function(next) {
-  if (this.isModified('name') || !this.slug) {
-    this.slug = this.name
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .trim();
-  }
-  next();
-});
 
 // Index for better performance
 brandSchema.index({ name: 1 });
-brandSchema.index({ slug: 1 });
 brandSchema.index({ isActive: 1 });
 brandSchema.index({ displayOrder: 1 });
 

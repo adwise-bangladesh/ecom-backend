@@ -252,33 +252,3 @@ exports.deleteProductAttribute = async (req, res) => {
   }
 };
 
-// @desc    Check slug availability for product attribute
-// @route   GET /api/v1/admin/product-attributes/check-slug/:slug
-// @access  Private/Admin
-exports.checkSlugAvailability = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const { excludeId } = req.query;
-    
-    let query = { slug };
-    if (excludeId) {
-      query._id = { $ne: excludeId };
-    }
-    
-    const existingAttribute = await ProductAttribute.findOne(query);
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        available: !existingAttribute,
-        slug: slug
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error checking slug availability',
-      error: error.message
-    });
-  }
-};

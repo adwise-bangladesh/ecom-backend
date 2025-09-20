@@ -7,16 +7,6 @@ const productAttributeSchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
-  slug: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true
-  },
-  description: {
-    type: String,
-    maxlength: [500, 'Description cannot be more than 500 characters']
-  },
   
   // Attribute Type
   type: {
@@ -46,45 +36,13 @@ const productAttributeSchema = new mongoose.Schema({
   isRequired: {
     type: Boolean,
     default: false
-  },
-  displayOrder: {
-    type: Number,
-    default: 0
-  },
-  
-  // Validation
-  validation: {
-    min: Number,
-    max: Number,
-    pattern: String,
-    message: String
-  },
-  
-  // Grouping
-  group: {
-    type: String,
-    default: 'general'
   }
 }, {
   timestamps: true
 });
 
 // Indexes
-productAttributeSchema.index({ slug: 1 });
 productAttributeSchema.index({ type: 1 });
 productAttributeSchema.index({ isVariation: 1 });
-
-// Generate slug from name before saving
-productAttributeSchema.pre('save', function(next) {
-  if (this.isModified('name') && !this.slug) {
-    this.slug = this.name
-      .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-  next();
-});
 
 module.exports = mongoose.model('ProductAttribute', productAttributeSchema);
