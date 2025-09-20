@@ -9,10 +9,8 @@ exports.getProductAttributes = async (req, res) => {
       page = 1, 
       limit = 10, 
       search = '', 
-      type = 'all',
-      isVariation = 'all',
-      group = 'all',
-      sortBy = 'displayOrder',
+      status = 'all',
+      sortBy = 'name',
       sortOrder = 'asc'
     } = req.query;
 
@@ -26,15 +24,11 @@ exports.getProductAttributes = async (req, res) => {
     if (search) {
       const searchRegex = new RegExp(search, 'i');
       query.$or = [
-        { name: searchRegex },
-        { description: searchRegex },
-        { group: searchRegex }
+        { name: searchRegex }
       ];
     }
 
-    if (type !== 'all') query.type = type;
-    if (isVariation !== 'all') query.isVariation = isVariation === 'true';
-    if (group !== 'all') query.group = group;
+    if (status !== 'all') query.isActive = status === 'active';
 
     // Build sort object
     const sortObj = {};

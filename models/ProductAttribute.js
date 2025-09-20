@@ -8,41 +8,22 @@ const productAttributeSchema = new mongoose.Schema({
     unique: true
   },
   
-  // Attribute Type
-  type: {
-    type: String,
-    enum: ['text', 'number', 'select', 'multiselect', 'boolean', 'color', 'image'],
-    default: 'text',
-    required: true
-  },
-  
-  // Predefined Values (for select/multiselect types)
+  // Values for the attribute
   values: [{
     value: String,
-    label: String,
-    colorCode: String, // For color type
-    image: String      // For image type
+    label: String
   }],
   
-  // Display Settings
-  isVisible: {
+  // Status
+  isActive: {
     type: Boolean,
     default: true
-  },
-  isVariation: {
-    type: Boolean,
-    default: false  // True if used for product variations
-  },
-  isRequired: {
-    type: Boolean,
-    default: false
   }
 }, {
   timestamps: true
 });
 
 // Indexes
-productAttributeSchema.index({ type: 1 });
-productAttributeSchema.index({ isVariation: 1 });
+productAttributeSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model('ProductAttribute', productAttributeSchema);
