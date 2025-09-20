@@ -247,10 +247,14 @@ exports.getOrders = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const status = req.query.status || '';
+    const phone = req.query.phone || '';
 
     let query = {};
     if (status) {
       query.status = status;
+    }
+    if (phone) {
+      query['shippingInfo.phone'] = phone;
     }
 
     const orders = await Order.find(query)
