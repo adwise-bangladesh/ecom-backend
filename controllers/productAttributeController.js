@@ -127,7 +127,7 @@ exports.createProductAttribute = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Product attribute with this name or slug already exists'
+        message: 'Product attribute with this name already exists'
       });
     }
     
@@ -201,7 +201,7 @@ exports.updateProductAttribute = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Attribute slug already exists'
+        message: 'Product attribute with this name already exists'
       });
     }
 

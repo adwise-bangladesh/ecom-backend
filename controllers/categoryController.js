@@ -11,9 +11,11 @@ exports.getCategories = async (req, res) => {
     let query = {};
     
     // For public API, only show active categories
+    // For admin API, show all categories (active and inactive)
     if (!req.user || !req.user.role || req.user.role !== 'admin') {
       query.isActive = true;
     }
+    // If admin, show all categories regardless of status
     
     // Filter by parent
     if (parentId) {

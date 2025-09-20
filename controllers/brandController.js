@@ -162,7 +162,7 @@ const createBrand = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Brand slug already exists'
+        message: 'Brand with this name already exists'
       });
     }
 
@@ -244,7 +244,7 @@ const updateBrand = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Brand slug already exists'
+        message: 'Brand with this name already exists'
       });
     }
 
