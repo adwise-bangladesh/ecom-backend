@@ -380,16 +380,12 @@ exports.checkSlugAvailability = async (req, res) => {
     const { slug } = req.params;
     const { excludeId } = req.query;
 
-    console.log('Checking slug availability:', { slug, excludeId });
-
     const query = { slug };
     if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
       query._id = { $ne: new mongoose.Types.ObjectId(excludeId) };
     }
 
-    console.log('Query:', query);
     const existingCategory = await Category.findOne(query);
-    console.log('Existing category:', existingCategory ? existingCategory._id : 'None');
 
     res.status(200).json({
       success: true,
