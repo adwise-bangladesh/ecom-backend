@@ -140,7 +140,7 @@ exports.getAdminCategories = async (req, res) => {
 // Admin: Create new category
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description, parent, image, isActive = true } = req.body;
+    const { name, slug, description, parent, image, isActive = true } = req.body;
 
     // Validate required fields
     if (!name || !name.trim()) {
@@ -176,15 +176,14 @@ exports.createCategory = async (req, res) => {
       }
     }
 
-    // Generate slug from name
-    const slug = name.trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    // Use provided slug or generate from name
+    const finalSlug = slug && slug.trim() 
+      ? slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     const categoryData = {
       name: name.trim(),
-      slug: slug,
+      slug: finalSlug,
       description: description?.trim() || '',
       parent: parent || null,
       image: image || '',
@@ -234,7 +233,7 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, parent, image, isActive } = req.body;
+    const { name, slug, description, parent, image, isActive } = req.body;
 
     const category = await Category.findById(id);
     if (!category) {
@@ -284,11 +283,12 @@ exports.updateCategory = async (req, res) => {
     const updateData = {};
     if (name !== undefined) {
       updateData.name = name.trim();
-      // Generate new slug when name changes
-      updateData.slug = name.trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
+    }
+    if (slug !== undefined) {
+      // Use provided slug or generate from name
+      updateData.slug = slug && slug.trim() 
+        ? slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        : name ? name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : category.slug;
     }
     if (description !== undefined) updateData.description = description.trim();
     if (parent !== undefined) updateData.parent = parent || null;
