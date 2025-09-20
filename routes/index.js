@@ -6,6 +6,7 @@ const authController = require('../controllers/authController');
 const productController = require('../controllers/productController');
 const categoryController = require('../controllers/categoryController');
 const productAttributeController = require('../controllers/productAttributeController');
+const brandController = require('../controllers/brandController');
 const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
 const adminController = require('../controllers/adminController');
@@ -25,6 +26,9 @@ const {
 router.get('/home', productController.getHomeData);
 router.get('/categories', categoryController.getCategories);
 router.get('/categories/:slug', categoryController.getCategory);
+router.get('/brands', brandController.getBrands);
+router.get('/brands/dropdown', brandController.getBrandsDropdown);
+router.get('/brands/:id', brandController.getBrand);
 router.get('/products', productController.getProducts);
 router.get('/products/:slug', productController.getProduct);
 router.get('/products/:slug/related', productController.getRelatedProducts);
@@ -80,6 +84,15 @@ router.put('/admin/orders/:id/status', adminAuth, adminController.updateOrderSta
 router.put('/admin/orders/:id', adminAuth, adminController.updateOrder);
 router.post('/admin/orders/:id/log', adminAuth, adminController.addOrderLog);
 router.post('/admin/orders/bulk-assign-courier', adminAuth, adminController.bulkAssignCourier);
+
+// Admin routes - Brands
+router.get('/admin/brands', adminAuth, brandController.getBrands);
+router.post('/admin/brands', adminAuth, brandController.createBrand);
+router.get('/admin/brands/:id', adminAuth, brandController.getBrand);
+router.put('/admin/brands/:id', adminAuth, brandController.updateBrand);
+router.delete('/admin/brands/:id', adminAuth, brandController.deleteBrand);
+router.get('/admin/brands/check-slug/:slug', adminAuth, brandController.checkSlugAvailability);
+router.put('/admin/brands/:id/update-product-count', adminAuth, brandController.updateProductCount);
 
 // Admin routes - Users
 router.get('/admin/users', adminAuth, adminController.getUsers);
