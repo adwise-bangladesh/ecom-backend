@@ -5,24 +5,69 @@ const ProductAttribute = require('../models/ProductAttribute');
 // @access  Private/Admin
 exports.getProductAttributes = async (req, res) => {
   try {
-    const { type, isVariation, group } = req.query;
-    
+    const { 
+      page = 1, 
+      limit = 10, 
+      search = '', 
+      type = 'all',
+      isVariation = 'all',
+      group = 'all',
+      sortBy = 'displayOrder',
+      sortOrder = 'asc'
+    } = req.query;
+
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // Build query
     let query = {};
     
-    if (type) query.type = type;
-    if (isVariation !== undefined) query.isVariation = isVariation === 'true';
-    if (group) query.group = group;
-    
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { name: searchRegex },
+        { description: searchRegex },
+        { group: searchRegex }
+      ];
+    }
+
+    if (type !== 'all') query.type = type;
+    if (isVariation !== 'all') query.isVariation = isVariation === 'true';
+    if (group !== 'all') query.group = group;
+
+    // Build sort object
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    if (sortBy !== 'name') {
+      sortObj.name = 1; // Secondary sort by name
+    }
+
+    // Execute query
     const attributes = await ProductAttribute.find(query)
-      .sort({ group: 1, displayOrder: 1, name: 1 });
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limitNumber)
+      .lean();
+
+    const totalAttributes = await ProductAttribute.countDocuments(query);
+    const totalPages = Math.ceil(totalAttributes / limitNumber);
 
     res.status(200).json({
       success: true,
       data: {
-        attributes: attributes
+        attributes,
+        pagination: {
+          currentPage: pageNumber,
+          totalPages,
+          totalAttributes,
+          hasNextPage: pageNumber < totalPages,
+          hasPrevPage: pageNumber > 1
+        }
       }
     });
   } catch (error) {
+    console.error('Error fetching product attributes:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching product attributes',
@@ -63,14 +108,28 @@ exports.getProductAttribute = async (req, res) => {
 // @access  Private/Admin
 exports.createProductAttribute = async (req, res) => {
   try {
+    // Check if attribute name already exists
+    const existingAttribute = await ProductAttribute.findOne({ 
+      name: { $regex: new RegExp(`^${req.body.name}$`, 'i') } 
+    });
+
+    if (existingAttribute) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attribute with this name already exists'
+      });
+    }
+
     const attribute = await ProductAttribute.create(req.body);
 
     res.status(201).json({
       success: true,
       message: 'Product attribute created successfully',
-      data: attribute
+      data: { attribute }
     });
   } catch (error) {
+    console.error('Error creating product attribute:', error);
+    
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -100,11 +159,7 @@ exports.createProductAttribute = async (req, res) => {
 // @access  Private/Admin
 exports.updateProductAttribute = async (req, res) => {
   try {
-    const attribute = await ProductAttribute.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const attribute = await ProductAttribute.findById(req.params.id);
 
     if (!attribute) {
       return res.status(404).json({
@@ -113,13 +168,50 @@ exports.updateProductAttribute = async (req, res) => {
       });
     }
 
+    // Check if name is being changed and if new name already exists
+    if (req.body.name && req.body.name !== attribute.name) {
+      const existingAttribute = await ProductAttribute.findOne({ 
+        name: { $regex: new RegExp(`^${req.body.name}$`, 'i') },
+        _id: { $ne: req.params.id }
+      });
+
+      if (existingAttribute) {
+        return res.status(400).json({
+          success: false,
+          message: 'Attribute with this name already exists'
+        });
+      }
+    }
+
+    // Update the attribute
+    Object.assign(attribute, req.body);
+    await attribute.save();
+
     res.status(200).json({
       success: true,
       message: 'Product attribute updated successfully',
-      data: attribute
+      data: { attribute }
     });
   } catch (error) {
-    res.status(400).json({
+    console.error('Error updating product attribute:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation Error',
+        errors
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attribute slug already exists'
+      });
+    }
+
+    res.status(500).json({
       success: false,
       message: 'Error updating product attribute',
       error: error.message
@@ -132,7 +224,7 @@ exports.updateProductAttribute = async (req, res) => {
 // @access  Private/Admin
 exports.deleteProductAttribute = async (req, res) => {
   try {
-    const attribute = await ProductAttribute.findByIdAndDelete(req.params.id);
+    const attribute = await ProductAttribute.findById(req.params.id);
 
     if (!attribute) {
       return res.status(404).json({
@@ -141,11 +233,17 @@ exports.deleteProductAttribute = async (req, res) => {
       });
     }
 
+    // TODO: Check if attribute is being used by any products
+    // For now, we'll allow deletion but this should be enhanced later
+
+    await ProductAttribute.findByIdAndDelete(req.params.id);
+
     res.status(200).json({
       success: true,
       message: 'Product attribute deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting product attribute:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting product attribute',
