@@ -139,7 +139,18 @@ exports.createProduct = async (req, res) => {
       });
     }
     
-    const product = await Product.create(req.body);
+    // Generate slug if not provided
+    const productData = { ...req.body };
+    if (!productData.slug) {
+      productData.slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9 -]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    }
+    
+    const product = await Product.create(productData);
     
     await product.populate('category', 'name slug');
     

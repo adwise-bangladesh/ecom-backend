@@ -74,13 +74,13 @@ productSchema.index({ createdAt: -1 });
 
 // Generate slug from title before saving
 productSchema.pre('save', function(next) {
-  if (this.isModified('title') && !this.slug) {
+  if (this.isModified('title') || !this.slug) {
     this.slug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9 -]/g, '') // Remove special characters
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-      .trim('-'); // Remove leading/trailing hyphens
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   }
   next();
 });
