@@ -1,343 +1,182 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const Category = require('../models/Category');
 
-// Load environment variables
-require('dotenv').config();
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-const sampleCategories = [
-  // Main Categories (Level 0)
-  {
-    name: 'Electronics',
-    slug: 'electronics',
-    description: 'Electronic devices and gadgets',
-    parent: null,
-    level: 0,
-    displayOrder: 1,
-    isActive: true,
-    showOnHomepage: true,
-    productCount: 0
-  },
-  {
-    name: 'Clothing',
-    slug: 'clothing',
-    description: 'Fashion and apparel for all ages',
-    parent: null,
-    level: 0,
-    displayOrder: 2,
-    isActive: true,
-    showOnHomepage: true,
-    productCount: 0
-  },
-  {
-    name: 'Home & Garden',
-    slug: 'home-garden',
-    description: 'Home improvement and gardening supplies',
-    parent: null,
-    level: 0,
-    displayOrder: 3,
-    isActive: true,
-    showOnHomepage: true,
-    productCount: 0
-  },
-  {
-    name: 'Sports & Outdoors',
-    slug: 'sports-outdoors',
-    description: 'Sports equipment and outdoor gear',
-    parent: null,
-    level: 0,
-    displayOrder: 4,
-    isActive: true,
-    showOnHomepage: false,
-    productCount: 0
-  },
-  {
-    name: 'Books',
-    slug: 'books',
-    description: 'Books, magazines, and educational materials',
-    parent: null,
-    level: 0,
-    displayOrder: 5,
-    isActive: true,
-    showOnHomepage: false,
-    productCount: 0
-  }
-];
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not defined in .env file');
+  process.exit(1);
+}
 
 const seedCategories = async () => {
   try {
-    console.log('🌱 Starting category seeding...');
+    // Connect to MongoDB
+    await mongoose.connect(MONGODB_URI);
+    console.log('Connected to MongoDB');
 
     // Clear existing categories
     await Category.deleteMany({});
-    console.log('✅ Cleared existing categories');
+    console.log('Cleared existing categories');
 
-    // Create main categories first
-    const createdCategories = [];
-    for (const categoryData of sampleCategories) {
-      const category = await Category.create(categoryData);
-      createdCategories.push(category);
-      console.log(`✅ Created main category: ${category.name}`);
-    }
+    // Create sample categories
+    const categories = [
+      {
+        name: 'Electronics',
+        slug: 'electronics',
+        description: 'Electronic devices and gadgets',
+        image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300&h=200&fit=crop',
+        isActive: true
+      },
+      {
+        name: 'Clothing',
+        slug: 'clothing',
+        description: 'Fashion and apparel',
+        image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
+        isActive: true
+      },
+      {
+        name: 'Home & Garden',
+        slug: 'home-garden',
+        description: 'Home improvement and garden supplies',
+        image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=300&h=200&fit=crop',
+        isActive: true
+      },
+      {
+        name: 'Sports & Outdoors',
+        slug: 'sports-outdoors',
+        description: 'Sports equipment and outdoor gear',
+        image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop',
+        isActive: true
+      },
+      {
+        name: 'Books',
+        slug: 'books',
+        description: 'Books and educational materials',
+        image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=200&fit=crop',
+        isActive: true
+      }
+    ];
 
-    // Create subcategories (Level 1)
-    const electronicsId = createdCategories.find(c => c.name === 'Electronics')._id;
-    const clothingId = createdCategories.find(c => c.name === 'Clothing')._id;
-    const homeId = createdCategories.find(c => c.name === 'Home & Garden')._id;
-    const sportsId = createdCategories.find(c => c.name === 'Sports & Outdoors')._id;
-    const booksId = createdCategories.find(c => c.name === 'Books')._id;
+    // Create parent categories first
+    const createdCategories = await Category.insertMany(categories);
+    console.log(`Created ${createdCategories.length} parent categories`);
 
+    // Create subcategories
     const subcategories = [
-      // Electronics subcategories
       {
         name: 'Smartphones',
         slug: 'smartphones',
         description: 'Mobile phones and accessories',
-        parent: electronicsId,
-        level: 1,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: true,
-        productCount: 0
+        parent: createdCategories[0]._id, // Electronics
+        image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=200&fit=crop',
+        isActive: true
       },
       {
         name: 'Laptops',
         slug: 'laptops',
-        description: 'Portable computers and accessories',
-        parent: electronicsId,
-        level: 1,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: true,
-        productCount: 0
+        description: 'Laptop computers and accessories',
+        parent: createdCategories[0]._id, // Electronics
+        image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=200&fit=crop',
+        isActive: true
       },
-      {
-        name: 'Audio & Headphones',
-        slug: 'audio-headphones',
-        description: 'Speakers, headphones, and audio equipment',
-        parent: electronicsId,
-        level: 1,
-        displayOrder: 3,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      // Clothing subcategories
       {
         name: 'Men\'s Clothing',
         slug: 'mens-clothing',
         description: 'Clothing for men',
-        parent: clothingId,
-        level: 1,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: true,
-        productCount: 0
+        parent: createdCategories[1]._id, // Clothing
+        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop',
+        isActive: true
       },
       {
         name: 'Women\'s Clothing',
         slug: 'womens-clothing',
         description: 'Clothing for women',
-        parent: clothingId,
-        level: 1,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: true,
-        productCount: 0
+        parent: createdCategories[1]._id, // Clothing
+        image: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=300&h=200&fit=crop',
+        isActive: true
       },
-      {
-        name: 'Kids\' Clothing',
-        slug: 'kids-clothing',
-        description: 'Clothing for children',
-        parent: clothingId,
-        level: 1,
-        displayOrder: 3,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      // Home & Garden subcategories
       {
         name: 'Furniture',
         slug: 'furniture',
-        description: 'Home and office furniture',
-        parent: homeId,
-        level: 1,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: true,
-        productCount: 0
+        description: 'Home furniture and decor',
+        parent: createdCategories[2]._id, // Home & Garden
+        image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=300&h=200&fit=crop',
+        isActive: true
       },
       {
         name: 'Kitchen & Dining',
         slug: 'kitchen-dining',
-        description: 'Kitchen appliances and dining accessories',
-        parent: homeId,
-        level: 1,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      {
-        name: 'Garden Tools',
-        slug: 'garden-tools',
-        description: 'Gardening equipment and tools',
-        parent: homeId,
-        level: 1,
-        displayOrder: 3,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      // Sports subcategories
-      {
-        name: 'Fitness Equipment',
-        slug: 'fitness-equipment',
-        description: 'Exercise and fitness gear',
-        parent: sportsId,
-        level: 1,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      {
-        name: 'Outdoor Gear',
-        slug: 'outdoor-gear',
-        description: 'Camping and outdoor equipment',
-        parent: sportsId,
-        level: 1,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      // Books subcategories
-      {
-        name: 'Fiction',
-        slug: 'fiction',
-        description: 'Fiction books and novels',
-        parent: booksId,
-        level: 1,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      {
-        name: 'Non-Fiction',
-        slug: 'non-fiction',
-        description: 'Non-fiction books and educational materials',
-        parent: booksId,
-        level: 1,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
+        description: 'Kitchen appliances and dining supplies',
+        parent: createdCategories[2]._id, // Home & Garden
+        image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=200&fit=crop',
+        isActive: true
       }
     ];
 
-    // Create subcategories
-    for (const subcategoryData of subcategories) {
-      const subcategory = await Category.create(subcategoryData);
-      console.log(`✅ Created subcategory: ${subcategory.name} (under ${subcategoryData.parent ? 'parent' : 'main'})`);
-    }
+    const createdSubcategories = await Category.insertMany(subcategories);
+    console.log(`Created ${createdSubcategories.length} subcategories`);
 
-    // Create some level 2 subcategories (sub-subcategories)
-    const smartphonesId = await Category.findOne({ slug: 'smartphones' }).select('_id');
-    const laptopsId = await Category.findOne({ slug: 'laptops' }).select('_id');
-    const mensClothingId = await Category.findOne({ slug: 'mens-clothing' }).select('_id');
-
-    const level2Categories = [
+    // Create some third-level categories
+    const thirdLevelCategories = [
       {
         name: 'iPhone',
         slug: 'iphone',
         description: 'Apple iPhone smartphones',
-        parent: smartphonesId._id,
-        level: 2,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
+        parent: createdSubcategories[0]._id, // Smartphones
+        image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=200&fit=crop',
+        isActive: true
       },
       {
         name: 'Android Phones',
         slug: 'android-phones',
         description: 'Android smartphones',
-        parent: smartphonesId._id,
-        level: 2,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
+        parent: createdSubcategories[0]._id, // Smartphones
+        image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=200&fit=crop',
+        isActive: true
       },
       {
-        name: 'Gaming Laptops',
-        slug: 'gaming-laptops',
-        description: 'High-performance gaming laptops',
-        parent: laptopsId._id,
-        level: 2,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
+        name: 'MacBooks',
+        slug: 'macbooks',
+        description: 'Apple MacBook laptops',
+        parent: createdSubcategories[1]._id, // Laptops
+        image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=200&fit=crop',
+        isActive: true
       },
       {
-        name: 'Business Laptops',
-        slug: 'business-laptops',
-        description: 'Professional business laptops',
-        parent: laptopsId._id,
-        level: 2,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      {
-        name: 'Men\'s Shirts',
-        slug: 'mens-shirts',
-        description: 'Men\'s shirts and tops',
-        parent: mensClothingId._id,
-        level: 2,
-        displayOrder: 1,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
-      },
-      {
-        name: 'Men\'s Pants',
-        slug: 'mens-pants',
-        description: 'Men\'s pants and trousers',
-        parent: mensClothingId._id,
-        level: 2,
-        displayOrder: 2,
-        isActive: true,
-        showOnHomepage: false,
-        productCount: 0
+        name: 'Windows Laptops',
+        slug: 'windows-laptops',
+        description: 'Windows-based laptops',
+        parent: createdSubcategories[1]._id, // Laptops
+        image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=200&fit=crop',
+        isActive: true
       }
     ];
 
-    // Create level 2 categories
-    for (const level2Data of level2Categories) {
-      const level2Category = await Category.create(level2Data);
-      console.log(`✅ Created level 2 category: ${level2Category.name}`);
-    }
+    const createdThirdLevel = await Category.insertMany(thirdLevelCategories);
+    console.log(`Created ${createdThirdLevel.length} third-level categories`);
 
-    console.log('🎉 Category seeding completed successfully!');
-    console.log(`📊 Created ${sampleCategories.length} main categories, ${subcategories.length} subcategories, and ${level2Categories.length} level 2 categories`);
+    console.log('\n✅ Categories seeded successfully!');
+    console.log(`Total categories created: ${createdCategories.length + createdSubcategories.length + createdThirdLevel.length}`);
+    
+    // Display the hierarchy
+    console.log('\n📁 Category Hierarchy:');
+    const allCategories = await Category.find({}).populate('parentCategory', 'name').sort({ level: 1, name: 1 });
+    
+    allCategories.forEach(category => {
+      const indent = '  '.repeat(category.level);
+      const parentInfo = category.parentCategory ? ` (under ${category.parentCategory.name})` : '';
+      console.log(`${indent}${category.name}${parentInfo}`);
+    });
 
   } catch (error) {
-    console.error('❌ Error seeding categories:', error);
+    console.error('Error seeding categories:', error);
   } finally {
-    mongoose.connection.close();
+    await mongoose.disconnect();
+    console.log('\nDisconnected from MongoDB');
+    process.exit(0);
   }
 };
 
-// Run the seeding
+// Run the seed function
 seedCategories();
