@@ -23,15 +23,7 @@ const brandSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: '',
-    validate: {
-      validator: function(v) {
-        if (!v) return true; // Allow empty
-        return /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(v) || 
-               /^https?:\/\/.+\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i.test(v);
-      },
-      message: 'Image must be a valid base64 data URL or HTTP(S) URL'
-    }
+    default: ''
   },
   website: {
     type: String,

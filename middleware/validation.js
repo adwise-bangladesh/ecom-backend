@@ -175,12 +175,8 @@ exports.validateCategory = [
   body('image')
     .optional()
     .custom((value) => {
-      if (!value) return true; // Allow empty
-      const isBase64 = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(value);
-      const isUrl = /^https?:\/\/.+\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i.test(value);
-      if (!isBase64 && !isUrl) {
-        throw new Error('Image must be a valid base64 data URL or HTTP(S) URL');
-      }
+      if (!value || value.trim() === '') return true; // Allow empty
+      // Allow any string for now (more flexible)
       return true;
     }),
   body('isActive')
@@ -259,12 +255,8 @@ exports.validateBrand = [
   body('image')
     .optional()
     .custom((value) => {
-      if (!value) return true; // Allow empty
-      const isBase64 = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(value);
-      const isUrl = /^https?:\/\/.+\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i.test(value);
-      if (!isBase64 && !isUrl) {
-        throw new Error('Image must be a valid base64 data URL or HTTP(S) URL');
-      }
+      if (!value || value.trim() === '') return true; // Allow empty
+      // Allow any string for now (more flexible)
       return true;
     }),
   body('website')
