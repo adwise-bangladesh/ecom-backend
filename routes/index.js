@@ -98,19 +98,13 @@ router.post('/auth/login', validateLogin, handleValidationErrors, authController
 // Checkout route (optional auth - works with both user and session)
 router.post('/checkout', optionalAuth, validateOrder, handleValidationErrors, orderController.createOrder);
 
-// Seed database endpoint (for development/production seeding - admin only)
-router.post('/seed', adminAuth, productController.seedDatabase);
+// Seed database endpoint removed - use dedicated scripts instead
 
 // Protected routes
 router.get('/user/orders', optionalAuth, orderController.getUserOrders);
 
-// Admin routes - Products
+// Admin routes - Dashboard
 router.get('/admin/dashboard', adminAuth, adminController.getDashboardStats);
-router.get('/admin/products', adminAuth, adminController.getProducts);
-router.post('/admin/products', adminAuth, adminController.createProduct);
-router.put('/admin/products/:id', adminAuth, adminController.updateProduct);
-router.delete('/admin/products/:id', adminAuth, adminController.deleteProduct);
-router.get('/admin/products/check-slug/:slug', adminAuth, adminController.checkProductSlugAvailability);
 
 // Admin routes - Attributes
 router.get('/admin/attributes', adminAuth, attributeController.getAttributes);

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const ProductReview = require('../models/ProductReview');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
@@ -33,7 +34,7 @@ const getProductReviews = async (req, res) => {
 
     // Get rating distribution
     const ratingStats = await ProductReview.aggregate([
-      { $match: { product: mongoose.Types.ObjectId(productId), status: 'approved' } },
+      { $match: { product: new mongoose.Types.ObjectId(productId), status: 'approved' } },
       {
         $group: {
           _id: '$rating',
