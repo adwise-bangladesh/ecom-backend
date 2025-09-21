@@ -495,6 +495,7 @@ const getProductDropdown = async (req, res) => {
   }
 };
 
+
 module.exports = {
   getProducts,
   getProduct,
