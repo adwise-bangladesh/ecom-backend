@@ -495,51 +495,6 @@ const getProductDropdown = async (req, res) => {
   }
 };
 
-// @desc    Get single product for admin
-// @route   GET /api/v1/admin/products/:id
-// @access  Private/Admin
-const getAdminProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const product = await Product.findById(id)
-      .populate([
-        { path: 'categories', select: 'name slug' },
-        { path: 'brand', select: 'name slug' },
-        { path: 'unit', select: 'name symbol' },
-        { path: 'attributes.attribute', select: 'name values' }
-      ]);
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    // Get variations if it's a variable product
-    let variations = [];
-    if (product.type === 'variable') {
-      const ProductVariation = require('../models/ProductVariation');
-      variations = await ProductVariation.find({ product: id }).sort({ sortOrder: 1 });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: {
-        product,
-        variations
-      }
-    });
-  } catch (error) {
-    console.error('Error in getAdminProduct:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching product',
-      error: error.message
-    });
-  }
-};
 
 module.exports = {
   getProducts,
