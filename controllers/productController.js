@@ -1,131 +1,111 @@
 const Product = require('../models/Product');
+const ProductVariation = require('../models/ProductVariation');
+const ProductReview = require('../models/ProductReview');
 const Category = require('../models/Category');
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
+const Brand = require('../models/Brand');
+const Unit = require('../models/Unit');
+const Attribute = require('../models/Attribute');
 
-// @desc    Get home page data
-// @route   GET /api/v1/home
-// @access  Public
-exports.getHomeData = async (req, res) => {
-  try {
-    // Get featured products (latest 8 products)
-    const featuredProducts = await Product.find()
-      .populate('category', 'name slug')
-      .sort({ createdAt: -1 })
-      .limit(8)
-      .select('title slug images price regularPrice category createdAt');
-
-    // Get all categories
-    const categories = await Category.find()
-      .sort({ name: 1 })
-      .select('name slug image');
-
-    // Mock slider data (you can replace this with actual slider data)
-    const slider = [
-      {
-        id: 1,
-        title: 'Welcome to Our Store',
-        subtitle: 'Discover amazing products',
-        image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop',
-        link: '/products'
-      },
-      {
-        id: 2,
-        title: 'New Arrivals',
-        subtitle: 'Check out our latest collection',
-        image: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1200&h=400&fit=crop',
-        link: '/products?sort=newest'
-      }
-    ];
-
-    res.status(200).json({
-      success: true,
-      data: {
-        slider,
-        categories,
-        featuredProducts
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching home data',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Get all products with filters
+// @desc    Get all products with filtering, sorting, and pagination
 // @route   GET /api/v1/products
 // @access  Public
-exports.getProducts = async (req, res) => {
+const getProducts = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
-    const skip = (page - 1) * limit;
+    const {
+      page = 1,
+      limit = 12,
+      sort = '-createdAt',
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      rating,
+      inStock,
+      featured,
+      search,
+      status = 'published'
+    } = req.query;
 
-    // Build filter object
-    let filter = {};
-    
-    if (req.query.category) {
-      const category = await Category.findOne({ slug: req.query.category });
-      if (category) {
-        filter.category = category._id;
-      }
+    // Build query
+    const query = { status };
+
+    // Category filter
+    if (category) {
+      query.categories = category;
     }
 
-    if (req.query.search) {
-      filter.$or = [
-        { title: { $regex: req.query.search, $options: 'i' } },
-        { description: { $regex: req.query.search, $options: 'i' } }
+    // Brand filter
+    if (brand) {
+      query.brand = brand;
+    }
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query['pricing.regular'] = {};
+      if (minPrice) query['pricing.regular'].$gte = parseFloat(minPrice);
+      if (maxPrice) query['pricing.regular'].$lte = parseFloat(maxPrice);
+    }
+
+    // Rating filter
+    if (rating) {
+      query.averageRating = { $gte: parseFloat(rating) };
+    }
+
+    // In stock filter
+    if (inStock === 'true') {
+      query['stock.quantity'] = { $gt: 0 };
+    }
+
+    // Featured filter
+    if (featured === 'true') {
+      query.featured = true;
+    }
+
+    // Search filter
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { shortDescription: searchRegex },
+        { tags: searchRegex },
+        { sku: searchRegex }
       ];
     }
 
-    if (req.query.minPrice || req.query.maxPrice) {
-      filter.price = {};
-      if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
-      if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
-    }
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build sort object
-    let sort = { createdAt: -1 };
-    if (req.query.sort) {
-      switch (req.query.sort) {
-        case 'price-low':
-          sort = { price: 1 };
-          break;
-        case 'price-high':
-          sort = { price: -1 };
-          break;
-        case 'name':
-          sort = { title: 1 };
-          break;
-        case 'newest':
-          sort = { createdAt: -1 };
-          break;
-      }
-    }
-
-    const products = await Product.find(filter)
-      .populate('category', 'name slug')
+    // Execute query
+    const products = await Product.find(query)
+      .populate('categories', 'name slug')
+      .populate('brand', 'name slug')
+      .populate('unit', 'name symbol')
+      .populate('attributes.attribute', 'name')
       .sort(sort)
       .skip(skip)
-      .limit(limit)
-      .select('title slug description images price regularPrice stock category createdAt');
+      .limit(parseInt(limit))
+      .lean();
 
-    const total = await Product.countDocuments(filter);
-    const totalPages = Math.ceil(total / limit);
+    // Get total count for pagination
+    const total = await Product.countDocuments(query);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
 
     res.status(200).json({
       success: true,
       data: {
         products,
         pagination: {
-          currentPage: page,
+          currentPage: parseInt(page),
           totalPages,
           totalProducts: total,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
+          hasNextPage,
+          hasPrevPage,
+          limit: parseInt(limit)
         }
       }
     });
@@ -141,10 +121,17 @@ exports.getProducts = async (req, res) => {
 // @desc    Get single product by slug
 // @route   GET /api/v1/products/:slug
 // @access  Public
-exports.getProduct = async (req, res) => {
+const getProduct = async (req, res) => {
   try {
-    const product = await Product.findOne({ slug: req.params.slug })
-      .populate('category', 'name slug');
+    const { slug } = req.params;
+
+    const product = await Product.findOne({ slug, status: 'published' })
+      .populate('categories', 'name slug')
+      .populate('brand', 'name slug')
+      .populate('unit', 'name symbol')
+      .populate('attributes.attribute', 'name')
+      .populate('linkedProducts.upsells', 'title slug featuredImage pricing')
+      .populate('linkedProducts.crossSells', 'title slug featuredImage pricing');
 
     if (!product) {
       return res.status(404).json({
@@ -153,9 +140,27 @@ exports.getProduct = async (req, res) => {
       });
     }
 
+    // Get variations if it's a variable product
+    let variations = [];
+    if (product.type === 'variable') {
+      variations = await ProductVariation.findByProduct(product._id);
+    }
+
+    // Get approved reviews
+    const reviews = await ProductReview.findApprovedByProduct(product._id)
+      .limit(10)
+      .populate('reviewer.user', 'name');
+
+    // Increment view count
+    await Product.findByIdAndUpdate(product._id, { $inc: { viewCount: 1 } });
+
     res.status(200).json({
       success: true,
-      data: product
+      data: {
+        product,
+        variations,
+        reviews
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -166,13 +171,71 @@ exports.getProduct = async (req, res) => {
   }
 };
 
-// @desc    Get related products
-// @route   GET /api/v1/products/:slug/related
-// @access  Public
-exports.getRelatedProducts = async (req, res) => {
+// @desc    Create new product
+// @route   POST /api/v1/admin/products
+// @access  Private/Admin
+const createProduct = async (req, res) => {
   try {
-    const product = await Product.findOne({ slug: req.params.slug });
-    
+    const productData = req.body;
+
+    // Generate SKU if not provided
+    if (!productData.sku) {
+      const count = await Product.countDocuments();
+      productData.sku = `PRD${String(count + 1).padStart(6, '0')}`;
+    }
+
+    const product = await Product.create(productData);
+
+    // Populate references for response
+    await product.populate([
+      { path: 'categories', select: 'name slug' },
+      { path: 'brand', select: 'name slug' },
+      { path: 'unit', select: 'name symbol' },
+      { path: 'attributes.attribute', select: 'name' }
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: product
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({
+        success: false,
+        message: `Product with this ${field} already exists`,
+        error: error.message
+      });
+    }
+
+    res.status(400).json({
+      success: false,
+      message: 'Error creating product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Update product
+// @route   PUT /api/v1/admin/products/:id
+// @access  Private/Admin
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate([
+      { path: 'categories', select: 'name slug' },
+      { path: 'brand', select: 'name slug' },
+      { path: 'unit', select: 'name symbol' },
+      { path: 'attributes.attribute', select: 'name' }
+    ]);
+
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -180,402 +243,266 @@ exports.getRelatedProducts = async (req, res) => {
       });
     }
 
-    const relatedProducts = await Product.find({
-      category: product.category,
-      _id: { $ne: product._id }
-    })
-      .populate('category', 'name slug')
-      .limit(4)
-      .select('title slug images price regularPrice category');
-
     res.status(200).json({
       success: true,
-      data: relatedProducts
+      message: 'Product updated successfully',
+      data: product
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching related products',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Seed database with sample data
-// @route   POST /api/v1/seed
-// @access  Public (for development/production seeding)
-exports.seedDatabase = async (req, res) => {
-  try {
-    // Sample data
-    const categories = [
-      {
-        name: 'Electronics',
-        slug: 'electronics',
-        image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=300&fit=crop'
-      },
-      {
-        name: 'Clothing',
-        slug: 'clothing',
-        image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'
-      },
-      {
-        name: 'Home & Garden',
-        slug: 'home-garden',
-        image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop'
-      },
-      {
-        name: 'Sports',
-        slug: 'sports',
-        image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop'
-      },
-      {
-        name: 'Books',
-        slug: 'books',
-        image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop'
-      }
-    ];
-
-    const products = [
-      {
-        title: 'iPhone 15 Pro',
-        slug: 'iphone-15-pro',
-        description: 'The latest iPhone with advanced camera system and A17 Pro chip. Features titanium design and USB-C connectivity.',
-        images: [
-          'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop'
-        ],
-        price: 999,
-        stock: 50
-      },
-      {
-        title: 'Samsung Galaxy S24',
-        slug: 'samsung-galaxy-s24',
-        description: 'Premium Android smartphone with AI-powered features and stunning display.',
-        images: [
-          'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&h=600&fit=crop'
-        ],
-        price: 799,
-        stock: 30
-      },
-      {
-        title: 'MacBook Pro M3',
-        slug: 'macbook-pro-m3',
-        description: 'Powerful laptop with M3 chip, perfect for professionals and creatives.',
-        images: [
-          'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=600&h=600&fit=crop'
-        ],
-        price: 1999,
-        stock: 20
-      },
-      {
-        title: 'Nike Air Max 270',
-        slug: 'nike-air-max-270',
-        description: 'Comfortable running shoes with Max Air cushioning for all-day comfort.',
-        images: [
-          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop'
-        ],
-        price: 150,
-        stock: 100
-      },
-      {
-        title: 'Adidas Ultraboost 22',
-        slug: 'adidas-ultraboost-22',
-        description: 'Premium running shoes with Boost technology for energy return.',
-        images: [
-          'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop'
-        ],
-        price: 180,
-        stock: 75
-      },
-      {
-        title: 'Cotton T-Shirt',
-        slug: 'cotton-t-shirt',
-        description: 'Soft and comfortable cotton t-shirt, perfect for everyday wear.',
-        images: [
-          'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&h=600&fit=crop'
-        ],
-        price: 25,
-        stock: 200
-      },
-      {
-        title: 'Denim Jeans',
-        slug: 'denim-jeans',
-        description: 'Classic denim jeans with modern fit and comfort.',
-        images: [
-          'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&h=600&fit=crop'
-        ],
-        price: 80,
-        stock: 150
-      },
-      {
-        title: 'Coffee Maker',
-        slug: 'coffee-maker',
-        description: 'Automatic coffee maker with programmable features and thermal carafe.',
-        images: [
-          'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1559056199-641a0ac8c55f?w=600&h=600&fit=crop'
-        ],
-        price: 120,
-        stock: 40
-      },
-      {
-        title: 'Yoga Mat',
-        slug: 'yoga-mat',
-        description: 'Non-slip yoga mat with excellent grip and cushioning.',
-        images: [
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1506629905607-0b2b4b0b0b0b?w=600&h=600&fit=crop'
-        ],
-        price: 45,
-        stock: 80
-      },
-      {
-        title: 'JavaScript: The Good Parts',
-        slug: 'javascript-the-good-parts',
-        description: 'Essential guide to JavaScript programming by Douglas Crockford.',
-        images: [
-          'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop'
-        ],
-        price: 35,
-        stock: 60
-      }
-    ];
-
-    const users = [
-      {
-        name: 'Admin User',
-        email: 'admin@example.com',
-        phone: '1234567890',
-        password: 'admin123',
-        role: 'admin'
-      },
-      {
-        name: 'John Doe',
-        email: 'john@example.com',
-        phone: '9876543210',
-        password: 'user123',
-        role: 'customer'
-      }
-    ];
-
-    // Clear existing data
-    await Category.deleteMany({});
-    await Product.deleteMany({});
-    await User.deleteMany({});
-
-    // Create categories
-    const createdCategories = await Category.insertMany(categories);
-
-    // Create products with category references
-    const electronicsCategory = createdCategories.find(cat => cat.slug === 'electronics');
-    const clothingCategory = createdCategories.find(cat => cat.slug === 'clothing');
-    const sportsCategory = createdCategories.find(cat => cat.slug === 'sports');
-    const homeCategory = createdCategories.find(cat => cat.slug === 'home-garden');
-    const booksCategory = createdCategories.find(cat => cat.slug === 'books');
-
-    const productsWithCategories = products.map((product, index) => {
-      let category;
-      if (index < 3) category = electronicsCategory._id;
-      else if (index < 7) category = clothingCategory._id;
-      else if (index === 7) category = homeCategory._id;
-      else if (index === 8) category = sportsCategory._id;
-      else category = booksCategory._id;
-
-      return { ...product, category };
-    });
-
-    const createdProducts = await Product.insertMany(productsWithCategories);
-
-    // Hash passwords and create users
-    const hashedUsers = await Promise.all(users.map(async (user) => {
-      const hashedPassword = await bcrypt.hash(user.password, 12);
-      return { ...user, password: hashedPassword };
-    }));
-
-    const createdUsers = await User.insertMany(hashedUsers);
-
-    res.status(200).json({
-      success: true,
-      message: 'Database seeded successfully!',
-      data: {
-        categories: createdCategories.length,
-        products: createdProducts.length,
-        users: createdUsers.length
-      }
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error seeding database',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Update product pricing structure
-// @route   POST /api/v1/update-pricing
-// @access  Public (Development only)
-exports.updateProductPricing = async (req, res) => {
-  try {
-    console.log('🔄 Updating product pricing structure...');
-    
-    // Product pricing mapping based on current prices
-    const productPricingMap = {
-      'iphone-15-pro': {
-        regularPrice: 1199,
-        costPrice: 800,
-        wholesalePrice: 900,
-        resellPrice: 950
-      },
-      'samsung-galaxy-s24': {
-        regularPrice: 899,
-        costPrice: 650,
-        wholesalePrice: 720,
-        resellPrice: 750
-      },
-      'macbook-pro-m3': {
-        regularPrice: 2299,
-        costPrice: 1600,
-        wholesalePrice: 1800,
-        resellPrice: 1900
-      },
-      'nike-air-max-270': {
-        regularPrice: 180,
-        costPrice: 100,
-        wholesalePrice: 120,
-        resellPrice: 130
-      },
-      'adidas-ultraboost-22': {
-        regularPrice: 200,
-        costPrice: 120,
-        wholesalePrice: 140,
-        resellPrice: 150
-      },
-      'cotton-t-shirt': {
-        regularPrice: 30,
-        costPrice: 15,
-        wholesalePrice: 18,
-        resellPrice: 20
-      },
-      'denim-jeans': {
-        regularPrice: 100,
-        costPrice: 50,
-        wholesalePrice: 60,
-        resellPrice: 65
-      },
-      'coffee-maker': {
-        regularPrice: 150,
-        costPrice: 80,
-        wholesalePrice: 95,
-        resellPrice: 105
-      },
-      'yoga-mat': {
-        regularPrice: 60,
-        costPrice: 25,
-        wholesalePrice: 32,
-        resellPrice: 35
-      },
-      'javascript-the-good-parts': {
-        regularPrice: 45,
-        costPrice: 20,
-        wholesalePrice: 25,
-        resellPrice: 28
-      }
-    };
-    
-    // Get all products
-    const products = await Product.find({});
-    
-    if (products.length === 0) {
-      return res.status(404).json({
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({
         success: false,
-        message: 'No products found in database'
+        message: `Product with this ${field} already exists`,
+        error: error.message
       });
     }
-    
-    let updatedCount = 0;
-    const updatedProducts = [];
-    
-    // Update each product
-    for (const product of products) {
-      const pricing = productPricingMap[product.slug];
-      
-      if (pricing) {
-        // Update with specific pricing
-        const updatedProduct = await Product.findByIdAndUpdate(
-          product._id,
-          {
-            regularPrice: pricing.regularPrice,
-            costPrice: pricing.costPrice,
-            wholesalePrice: pricing.wholesalePrice,
-            resellPrice: pricing.resellPrice
-          },
-          { new: true }
-        );
-        
-        updatedProducts.push({
-          title: updatedProduct.title,
-          slug: updatedProduct.slug,
-          regularPrice: updatedProduct.regularPrice,
-          price: updatedProduct.price,
-          costPrice: updatedProduct.costPrice
-        });
-        
-        updatedCount++;
-      } else {
-        // Calculate generic pricing for unknown products
-        const currentPrice = product.price;
-        const regularPrice = Math.round(currentPrice * 1.2);
-        const costPrice = Math.round(currentPrice * 0.6);
-        const wholesalePrice = Math.round(currentPrice * 0.8);
-        const resellPrice = Math.round(currentPrice * 0.9);
-        
-        const updatedProduct = await Product.findByIdAndUpdate(
-          product._id,
-          {
-            regularPrice,
-            costPrice,
-            wholesalePrice,
-            resellPrice
-          },
-          { new: true }
-        );
-        
-        updatedProducts.push({
-          title: updatedProduct.title,
-          slug: updatedProduct.slug,
-          regularPrice: updatedProduct.regularPrice,
-          price: updatedProduct.price,
-          costPrice: updatedProduct.costPrice
-        });
-        
-        updatedCount++;
-      }
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: `Successfully updated ${updatedCount} products with pricing structure`,
-      data: {
-        updatedCount,
-        products: updatedProducts
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error updating product pricing:', error);
-    res.status(500).json({
+
+    res.status(400).json({
       success: false,
-      message: 'Error updating product pricing',
+      message: 'Error updating product',
       error: error.message
     });
   }
+};
+
+// @desc    Delete product
+// @route   DELETE /api/v1/admin/products/:id
+// @access  Private/Admin
+const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Delete associated variations
+    await ProductVariation.deleteMany({ product: id });
+
+    // Delete associated reviews
+    await ProductReview.deleteMany({ product: id });
+
+    // Delete the product
+    await Product.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get admin products with advanced filtering
+// @route   GET /api/v1/admin/products
+// @access  Private/Admin
+const getAdminProducts = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      sort = '-createdAt',
+      status,
+      type,
+      category,
+      brand,
+      search,
+      lowStock
+    } = req.query;
+
+    // Build query
+    const query = {};
+
+    if (status) query.status = status;
+    if (type) query.type = type;
+    if (category) query.categories = category;
+    if (brand) query.brand = brand;
+
+    // Low stock filter
+    if (lowStock === 'true') {
+      query.$expr = { $lte: ['$stock.quantity', '$stock.lowStockThreshold'] };
+    }
+
+    // Search filter
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { title: searchRegex },
+        { sku: searchRegex },
+        { 'pricing.regular': !isNaN(search) ? parseFloat(search) : undefined }
+      ].filter(condition => condition['pricing.regular'] !== undefined || condition.title || condition.sku);
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Execute query
+    const products = await Product.find(query)
+      .populate('categories', 'name')
+      .populate('brand', 'name')
+      .populate('unit', 'name symbol')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Get total count
+    const total = await Product.countDocuments(query);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalProducts: total,
+          hasNextPage: parseInt(page) < totalPages,
+          hasPrevPage: parseInt(page) > 1,
+          limit: parseInt(limit)
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching admin products',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get product by ID (admin)
+// @route   GET /api/v1/admin/products/:id
+// @access  Private/Admin
+const getAdminProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await Product.findById(id)
+      .populate('categories', 'name slug')
+      .populate('brand', 'name slug')
+      .populate('unit', 'name symbol')
+      .populate('attributes.attribute', 'name values')
+      .populate('linkedProducts.upsells', 'title slug')
+      .populate('linkedProducts.crossSells', 'title slug');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get variations if variable product
+    let variations = [];
+    if (product.type === 'variable') {
+      variations = await ProductVariation.find({ product: id }).sort({ sortOrder: 1 });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        product,
+        variations
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Check slug availability
+// @route   GET /api/v1/admin/products/check-slug/:slug
+// @access  Private/Admin
+const checkSlugAvailability = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { excludeId } = req.query;
+
+    const query = { slug };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const existingProduct = await Product.findOne(query);
+
+    res.status(200).json({
+      success: true,
+      available: !existingProduct,
+      message: existingProduct ? 'Slug already exists' : 'Slug is available'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error checking slug availability',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get product dropdown data
+// @route   GET /api/v1/admin/products/dropdown
+// @access  Private/Admin
+const getProductDropdown = async (req, res) => {
+  try {
+    const { search, limit = 50 } = req.query;
+
+    const query = { status: 'published' };
+    
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { title: searchRegex },
+        { sku: searchRegex }
+      ];
+    }
+
+    const products = await Product.find(query)
+      .select('title sku featuredImage pricing')
+      .limit(parseInt(limit))
+      .sort('title')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: products
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product dropdown',
+      error: error.message
+    });
+  }
+};
+
+module.exports = {
+  getProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getAdminProducts,
+  getAdminProduct,
+  checkSlugAvailability,
+  getProductDropdown
 };

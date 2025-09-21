@@ -4,6 +4,8 @@ const router = express.Router();
 // Import controllers
 const authController = require('../controllers/authController');
 const productController = require('../controllers/productController');
+const productVariationController = require('../controllers/productVariationController');
+const productReviewController = require('../controllers/productReviewController');
 const attributeController = require('../controllers/attributeController');
 const brandController = require('../controllers/brandController');
 const unitController = require('../controllers/unitController');
@@ -36,7 +38,6 @@ const {
 // router.use(requestSizeLimit('10mb'));
 
 // Public routes
-router.get('/home', productController.getHomeData);
 router.get('/brands', brandController.getBrands);
 router.get('/brands/dropdown', brandController.getBrandsDropdown);
 router.get('/brands/:id', brandController.getBrand);
@@ -45,12 +46,45 @@ router.get('/categories/:slug', categoryController.getCategory);
 router.get('/units', unitController.getUnits);
 router.get('/units/dropdown', unitController.getUnitsDropdown);
 router.get('/units/:id', unitController.getUnit);
+
+// Product routes (public)
 router.get('/products', productController.getProducts);
 router.get('/products/:slug', productController.getProduct);
-router.get('/products/:slug/related', productController.getRelatedProducts);
 
-// Development/Admin routes (restricted)
-router.post('/update-pricing', adminAuth, productController.updateProductPricing);
+// Product variation routes (public)
+router.get('/products/:productId/variations', productVariationController.getVariations);
+router.get('/variations/:id', productVariationController.getVariation);
+router.post('/products/:productId/variations/find', productVariationController.findVariationByAttributes);
+
+// Product review routes (public)
+router.get('/products/:productId/reviews', productReviewController.getProductReviews);
+router.post('/products/:productId/reviews', productReviewController.createReview);
+
+// Protected review routes (for logged-in users)
+router.post('/reviews/:id/vote', protect, productReviewController.addHelpfulVote);
+router.post('/reviews/:id/flag', protect, productReviewController.flagReview);
+
+// Admin routes (protected)
+// Product management
+router.get('/admin/products', adminAuth, productController.getAdminProducts);
+router.get('/admin/products/dropdown', adminAuth, productController.getProductDropdown);
+router.get('/admin/products/check-slug/:slug', adminAuth, productController.checkSlugAvailability);
+router.get('/admin/products/:id', adminAuth, productController.getAdminProduct);
+router.post('/admin/products', adminAuth, productController.createProduct);
+router.put('/admin/products/:id', adminAuth, productController.updateProduct);
+router.delete('/admin/products/:id', adminAuth, productController.deleteProduct);
+
+// Product variation management
+router.post('/admin/products/:productId/variations', adminAuth, productVariationController.createVariation);
+router.put('/admin/variations/:id', adminAuth, productVariationController.updateVariation);
+router.delete('/admin/variations/:id', adminAuth, productVariationController.deleteVariation);
+
+// Product review management
+router.get('/admin/reviews', adminAuth, productReviewController.getAdminReviews);
+router.get('/admin/reviews/:id', adminAuth, productReviewController.getAdminReview);
+router.put('/admin/reviews/:id/approve', adminAuth, productReviewController.approveReview);
+router.put('/admin/reviews/:id/reject', adminAuth, productReviewController.rejectReview);
+router.put('/admin/reviews/:id/spam', adminAuth, productReviewController.markAsSpam);
 
 // Cart routes (optional auth - works with both user and session)
 router.post('/cart', optionalAuth, validateCart, handleValidationErrors, cartController.addToCart);
