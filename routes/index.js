@@ -69,6 +69,7 @@ router.post('/reviews/:id/flag', protect, productReviewController.flagReview);
 router.get('/admin/products', adminAuth, productController.getAdminProducts);
 router.get('/admin/products/dropdown', adminAuth, productController.getProductDropdown);
 router.get('/admin/products/check-slug/:slug', adminAuth, productController.checkSlugAvailability);
+router.get('/admin/products/check-sku/:sku', adminAuth, productController.checkSkuAvailability);
 router.get('/admin/products/:id', adminAuth, productController.getAdminProduct);
 router.post('/admin/products', adminAuth, productController.createProduct);
 router.put('/admin/products/:id', adminAuth, productController.updateProduct);

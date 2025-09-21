@@ -459,6 +459,35 @@ const checkSlugAvailability = async (req, res) => {
   }
 };
 
+// @desc    Check SKU availability
+// @route   GET /api/v1/admin/products/check-sku/:sku
+// @access  Private/Admin
+const checkSkuAvailability = async (req, res) => {
+  try {
+    const { sku } = req.params;
+    const { excludeId } = req.query;
+
+    const query = { sku: sku.toUpperCase() };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const existingProduct = await Product.findOne(query);
+
+    res.status(200).json({
+      success: true,
+      available: !existingProduct,
+      message: existingProduct ? 'SKU already exists' : 'SKU is available'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error checking SKU availability',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Get product dropdown data
 // @route   GET /api/v1/admin/products/dropdown
 // @access  Private/Admin
@@ -505,5 +534,6 @@ module.exports = {
   getAdminProducts,
   getAdminProduct,
   checkSlugAvailability,
+  checkSkuAvailability,
   getProductDropdown
 };
