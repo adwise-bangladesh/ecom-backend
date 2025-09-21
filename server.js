@@ -8,9 +8,15 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(morgan('combined'));
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://localhost:3000'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -22,8 +28,13 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-// Static file serving for uploaded media
-app.use('/uploads/media', express.static('uploads/media'));
+// Static file serving for uploaded media with CORS headers
+app.use('/uploads/media', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+}, express.static('uploads/media'));
 
 // Routes
 app.use('/api/v1', require('./routes'));
