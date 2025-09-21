@@ -32,6 +32,14 @@ const categorySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  showOnHomepage: {
+    type: Boolean,
+    default: false
+  },
+  order: {
+    type: Number,
+    default: 0
+  },
   level: {
     type: Number,
     default: 0
@@ -94,5 +102,6 @@ categorySchema.index({ slug: 1 });
 categorySchema.index({ parent: 1 });
 categorySchema.index({ isActive: 1 });
 categorySchema.index({ level: 1 });
+categorySchema.index({ order: 1 });
 
 module.exports = mongoose.model('Category', categorySchema);

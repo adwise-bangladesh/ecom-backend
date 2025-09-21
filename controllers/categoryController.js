@@ -141,7 +141,7 @@ exports.getAdminCategories = async (req, res) => {
 // Admin: Create new category
 exports.createCategory = async (req, res) => {
   try {
-    const { name, slug, description, parent, image, isActive = true } = req.body;
+    const { name, slug, description, parent, image, isActive = true, showOnHomepage = false, order = 0 } = req.body;
 
     // Validate required fields
     if (!name || !name.trim()) {
@@ -188,7 +188,9 @@ exports.createCategory = async (req, res) => {
       description: description?.trim() || '',
       parent: parent || null,
       image: image || '',
-      isActive
+      isActive,
+      showOnHomepage,
+      order: parseInt(order) || 0
     };
 
     const category = new Category(categoryData);
@@ -234,7 +236,7 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, slug, description, parent, image, isActive } = req.body;
+    const { name, slug, description, parent, image, isActive, showOnHomepage, order } = req.body;
 
     const category = await Category.findById(id);
     if (!category) {
@@ -295,6 +297,8 @@ exports.updateCategory = async (req, res) => {
     if (parent !== undefined) updateData.parent = parent || null;
     if (image !== undefined) updateData.image = image;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (showOnHomepage !== undefined) updateData.showOnHomepage = showOnHomepage;
+    if (order !== undefined) updateData.order = parseInt(order) || 0;
 
     const updatedCategory = await Category.findByIdAndUpdate(
       id,
