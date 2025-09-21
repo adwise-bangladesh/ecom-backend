@@ -49,6 +49,11 @@ const orderSchema = new mongoose.Schema({
     type: String,
     required: false // For anonymous users
   },
+  orderNumber: {
+    type: String,
+    unique: true,
+    sparse: true // Allow null values but ensure uniqueness when present
+  },
   items: [orderItemSchema],
   subtotal: {
     type: Number,
@@ -122,10 +127,35 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Pre-save hook to generate order number
+orderSchema.pre('save', async function(next) {
+  if (!this.orderNumber) {
+    // Generate order number: ORD-YYYYMMDD-XXXX
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    
+    // Find the highest order number for today
+    const todayOrders = await this.constructor.find({
+      orderNumber: new RegExp(`^ORD-${dateStr}-`)
+    }).sort({ orderNumber: -1 }).limit(1);
+    
+    let sequence = 1;
+    if (todayOrders.length > 0) {
+      const lastOrderNumber = todayOrders[0].orderNumber;
+      const lastSequence = parseInt(lastOrderNumber.split('-')[2]);
+      sequence = lastSequence + 1;
+    }
+    
+    this.orderNumber = `ORD-${dateStr}-${sequence.toString().padStart(4, '0')}`;
+  }
+  next();
+});
+
 // Index for better performance
 orderSchema.index({ user: 1 });
 orderSchema.index({ sessionId: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ orderNumber: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);

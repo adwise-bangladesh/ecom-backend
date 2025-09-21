@@ -303,13 +303,19 @@ exports.getOrders = async (req, res) => {
     // Add search functionality
     if (search) {
       const searchRegex = new RegExp(search, 'i');
-      query.$or = [
+      const searchConditions = [
         { orderNumber: searchRegex },
         { 'shippingInfo.name': searchRegex },
         { 'shippingInfo.email': searchRegex },
-        { 'shippingInfo.phone': searchRegex },
-        { _id: searchRegex } // Search by order ID as well
+        { 'shippingInfo.phone': searchRegex }
       ];
+
+      // Only add _id search if the search term looks like a valid ObjectId
+      if (search.match(/^[0-9a-fA-F]{24}$/)) {
+        searchConditions.push({ _id: search });
+      }
+
+      query.$or = searchConditions;
     }
 
     const orders = await Order.find(query)
