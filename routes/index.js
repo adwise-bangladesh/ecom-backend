@@ -119,6 +119,7 @@ router.delete('/admin/attributes/:id', adminAuth, attributeController.deleteAttr
 router.get('/admin/media', adminAuth, mediaController.getMediaFiles);
 router.post('/admin/media/upload', adminAuth, mediaController.uploadMediaFiles);
 router.get('/admin/media/stats', adminAuth, mediaController.getMediaStats);
+router.get('/admin/media/serve/:filename', adminAuth, mediaController.serveMediaFile);
 router.get('/admin/media/:id', adminAuth, mediaController.getMediaFile);
 router.put('/admin/media/:id', adminAuth, mediaController.updateMediaFile);
 router.delete('/admin/media/:id', adminAuth, mediaController.deleteMediaFile);

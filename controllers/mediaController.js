@@ -6,21 +6,6 @@ const fs = require('fs');
 // Configure multer for file uploads with memory storage (better for production)
 const storage = multer.memoryStorage(); // Store in memory instead of disk
 
-// Alternative: Keep disk storage but with better organization
-const diskStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../uploads/media');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
 const fileFilter = (req, file, cb) => {
   // Allow images
   if (file.mimetype.startsWith('image/')) {
@@ -44,7 +29,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage: diskStorage, // Use disk storage for now, but memory storage is better for cloud
+  storage: storage, // Use memory storage for cloud deployment
   fileFilter: fileFilter,
   limits: {
     fileSize: 100 * 1024 * 1024 // 100MB limit
@@ -157,12 +142,16 @@ const uploadMediaFiles = async (req, res) => {
       const uploadedFiles = [];
 
       for (const file of req.files) {
+        // Generate unique filename for memory storage
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const filename = `files-${uniqueSuffix}${path.extname(file.originalname)}`;
+        
         const mediaData = {
-          filename: file.filename,
+          filename: filename,
           originalName: file.originalname,
           mimetype: file.mimetype,
           size: file.size,
-          url: generateFileUrl(req, file.filename),
+          url: `/uploads/media/${filename}`,
           category: getFileCategory(file.mimetype),
           uploadedBy: req.user.id,
           tags: [],
@@ -359,11 +348,52 @@ const getMediaStats = async (req, res) => {
   }
 };
 
+// @desc    Serve media file
+// @route   GET /api/v1/admin/media/serve/:filename
+// @access  Private/Admin
+const serveMediaFile = async (req, res) => {
+  try {
+    const { filename } = req.params;
+    
+    // Find the media file in database
+    const mediaFile = await Media.findOne({ filename: filename, isActive: true });
+    
+    if (!mediaFile) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found'
+      });
+    }
+
+    // For now, return a placeholder response
+    // In a real implementation, you'd serve the file from cloud storage
+    res.status(200).json({
+      success: true,
+      message: 'File found',
+      data: {
+        filename: mediaFile.filename,
+        originalName: mediaFile.originalName,
+        mimetype: mediaFile.mimetype,
+        size: mediaFile.size,
+        url: mediaFile.url
+      }
+    });
+  } catch (error) {
+    console.error('Error serving media file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error serving media file',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getMediaFiles,
   uploadMediaFiles,
   getMediaFile,
   updateMediaFile,
   deleteMediaFile,
-  getMediaStats
+  getMediaStats,
+  serveMediaFile
 };
