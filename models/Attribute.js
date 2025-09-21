@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const productAttributeSchema = new mongoose.Schema({
+const attributeSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Attribute name is required'],
@@ -24,6 +24,6 @@ const productAttributeSchema = new mongoose.Schema({
 });
 
 // Indexes
-productAttributeSchema.index({ isActive: 1 });
+attributeSchema.index({ isActive: 1 });
 
-module.exports = mongoose.model('ProductAttribute', productAttributeSchema);
+module.exports = mongoose.model('Attribute', attributeSchema);

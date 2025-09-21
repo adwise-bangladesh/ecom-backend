@@ -1,95 +1,94 @@
 const mongoose = require('mongoose');
-const ProductAttribute = require('../models/ProductAttribute');
-
-// Load environment variables
 require('dotenv').config();
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-// Sample attributes data (simplified)
-const sampleAttributes = [
-  {
-    name: 'Size',
-    values: [
-      { value: 'xs', label: 'Extra Small' },
-      { value: 's', label: 'Small' },
-      { value: 'm', label: 'Medium' },
-      { value: 'l', label: 'Large' },
-      { value: 'xl', label: 'Extra Large' },
-      { value: 'xxl', label: 'Double Extra Large' }
-    ],
-    isActive: true
-  },
-  {
-    name: 'Color',
-    values: [
-      { value: 'red', label: 'Red' },
-      { value: 'blue', label: 'Blue' },
-      { value: 'green', label: 'Green' },
-      { value: 'black', label: 'Black' },
-      { value: 'white', label: 'White' },
-      { value: 'yellow', label: 'Yellow' },
-      { value: 'purple', label: 'Purple' },
-      { value: 'orange', label: 'Orange' }
-    ],
-    isActive: true
-  },
-  {
-    name: 'Material',
-    values: [
-      { value: 'cotton', label: 'Cotton' },
-      { value: 'polyester', label: 'Polyester' },
-      { value: 'wool', label: 'Wool' },
-      { value: 'silk', label: 'Silk' },
-      { value: 'leather', label: 'Leather' },
-      { value: 'denim', label: 'Denim' },
-      { value: 'linen', label: 'Linen' }
-    ],
-    isActive: true
-  },
-  {
-    name: 'Storage Capacity',
-    values: [
-      { value: '32gb', label: '32 GB' },
-      { value: '64gb', label: '64 GB' },
-      { value: '128gb', label: '128 GB' },
-      { value: '256gb', label: '256 GB' },
-      { value: '512gb', label: '512 GB' },
-      { value: '1tb', label: '1 TB' }
-    ],
-    isActive: true
-  }
-];
+const Attribute = require('../models/Attribute');
 
 async function seedAttributes() {
   try {
-    console.log('🌱 Starting attribute seeding...');
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce');
+    console.log('Connected to MongoDB');
 
     // Clear existing attributes
-    await ProductAttribute.deleteMany({});
-    console.log('✅ Cleared existing attributes');
+    await Attribute.deleteMany({});
+    console.log('Cleared existing attributes');
 
-    // Insert sample attributes
-    const createdAttributes = await ProductAttribute.insertMany(sampleAttributes);
+    // Sample attributes data
+    const attributesData = [
+      {
+        name: 'Color',
+        values: [
+          { value: 'red', label: 'Red' },
+          { value: 'blue', label: 'Blue' },
+          { value: 'green', label: 'Green' },
+          { value: 'black', label: 'Black' },
+          { value: 'white', label: 'White' }
+        ],
+        isActive: true
+      },
+      {
+        name: 'Size',
+        values: [
+          { value: 'xs', label: 'Extra Small' },
+          { value: 's', label: 'Small' },
+          { value: 'm', label: 'Medium' },
+          { value: 'l', label: 'Large' },
+          { value: 'xl', label: 'Extra Large' }
+        ],
+        isActive: true
+      },
+      {
+        name: 'Material',
+        values: [
+          { value: 'cotton', label: 'Cotton' },
+          { value: 'polyester', label: 'Polyester' },
+          { value: 'wool', label: 'Wool' },
+          { value: 'leather', label: 'Leather' },
+          { value: 'silk', label: 'Silk' }
+        ],
+        isActive: true
+      },
+      {
+        name: 'Brand',
+        values: [
+          { value: 'apple', label: 'Apple' },
+          { value: 'samsung', label: 'Samsung' },
+          { value: 'nike', label: 'Nike' },
+          { value: 'adidas', label: 'Adidas' },
+          { value: 'sony', label: 'Sony' }
+        ],
+        isActive: true
+      },
+      {
+        name: 'Storage',
+        values: [
+          { value: '64gb', label: '64GB' },
+          { value: '128gb', label: '128GB' },
+          { value: '256gb', label: '256GB' },
+          { value: '512gb', label: '512GB' },
+          { value: '1tb', label: '1TB' }
+        ],
+        isActive: true
+      }
+    ];
+
+    // Insert attributes
+    const createdAttributes = await Attribute.insertMany(attributesData);
     console.log(`✅ Created ${createdAttributes.length} attributes`);
 
-    // List created attributes
-    createdAttributes.forEach(attr => {
-      console.log(`  - ${attr.name}: ${attr.values.length} values`);
+    // Display created attributes
+    createdAttributes.forEach((attribute, index) => {
+      console.log(`${index + 1}. ${attribute.name} - ${attribute.values.length} values`);
     });
 
-    console.log('🎉 Attribute seeding completed successfully!');
   } catch (error) {
     console.error('❌ Error seeding attributes:', error);
   } finally {
-    mongoose.connection.close();
-    console.log('🔌 MongoDB connection closed');
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB');
+    process.exit(0);
   }
 }
 
-// Run the seeding function
+// Run the seeding
 seedAttributes();

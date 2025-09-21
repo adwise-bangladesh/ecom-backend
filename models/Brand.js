@@ -12,15 +12,9 @@ const brandSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  logo: {
-    url: {
-      type: String,
-      trim: true
-    },
-    alt: {
-      type: String,
-      trim: true
-    }
+  image: {
+    type: String,
+    default: ''
   },
   website: {
     type: String,

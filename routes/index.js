@@ -4,7 +4,7 @@ const router = express.Router();
 // Import controllers
 const authController = require('../controllers/authController');
 const productController = require('../controllers/productController');
-const productAttributeController = require('../controllers/productAttributeController');
+const attributeController = require('../controllers/attributeController');
 const brandController = require('../controllers/brandController');
 const unitController = require('../controllers/unitController');
 const categoryController = require('../controllers/categoryController');
@@ -67,12 +67,12 @@ router.delete('/admin/products/:id', adminAuth, adminController.deleteProduct);
 router.get('/admin/products/check-slug/:slug', adminAuth, adminController.checkProductSlugAvailability);
 
 
-// Admin routes - Product Attributes
-router.get('/admin/product-attributes', adminAuth, productAttributeController.getProductAttributes);
-router.post('/admin/product-attributes', adminAuth, productAttributeController.createProductAttribute);
-router.get('/admin/product-attributes/:id', adminAuth, productAttributeController.getProductAttribute);
-router.put('/admin/product-attributes/:id', adminAuth, productAttributeController.updateProductAttribute);
-router.delete('/admin/product-attributes/:id', adminAuth, productAttributeController.deleteProductAttribute);
+// Admin routes - Attributes
+router.get('/admin/attributes', adminAuth, attributeController.getAttributes);
+router.post('/admin/attributes', adminAuth, attributeController.createAttribute);
+router.get('/admin/attributes/:id', adminAuth, attributeController.getAttribute);
+router.put('/admin/attributes/:id', adminAuth, attributeController.updateAttribute);
+router.delete('/admin/attributes/:id', adminAuth, attributeController.deleteAttribute);
 
 // Admin routes - Categories
 router.get('/admin/categories', adminAuth, categoryController.getAdminCategories);

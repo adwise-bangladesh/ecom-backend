@@ -1,9 +1,9 @@
-const ProductAttribute = require('../models/ProductAttribute');
+const Attribute = require('../models/Attribute');
 
-// @desc    Get all product attributes
-// @route   GET /api/v1/admin/product-attributes
+// @desc    Get all attributes
+// @route   GET /api/v1/admin/attributes
 // @access  Private/Admin
-exports.getProductAttributes = async (req, res) => {
+exports.getAttributes = async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -38,13 +38,13 @@ exports.getProductAttributes = async (req, res) => {
     }
 
     // Execute query
-    const attributes = await ProductAttribute.find(query)
+    const attributes = await Attribute.find(query)
       .sort(sortObj)
       .skip(skip)
       .limit(limitNumber)
       .lean();
 
-    const totalAttributes = await ProductAttribute.countDocuments(query);
+    const totalAttributes = await Attribute.countDocuments(query);
     const totalPages = Math.ceil(totalAttributes / limitNumber);
 
     res.status(200).json({
@@ -61,26 +61,26 @@ exports.getProductAttributes = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching product attributes:', error);
+    console.error('Error fetching attributes:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching product attributes',
+      message: 'Error fetching attributes',
       error: error.message
     });
   }
 };
 
-// @desc    Get single product attribute
-// @route   GET /api/v1/admin/product-attributes/:id
+// @desc    Get single attribute
+// @route   GET /api/v1/admin/attributes/:id
 // @access  Private/Admin
-exports.getProductAttribute = async (req, res) => {
+exports.getAttribute = async (req, res) => {
   try {
-    const attribute = await ProductAttribute.findById(req.params.id);
+    const attribute = await Attribute.findById(req.params.id);
 
     if (!attribute) {
       return res.status(404).json({
         success: false,
-        message: 'Product attribute not found'
+        message: 'Attribute not found'
       });
     }
 
@@ -91,16 +91,16 @@ exports.getProductAttribute = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error fetching product attribute',
+      message: 'Error fetching attribute',
       error: error.message
     });
   }
 };
 
-// @desc    Create new product attribute
-// @route   POST /api/v1/admin/product-attributes
+// @desc    Create new attribute
+// @route   POST /api/v1/admin/attributes
 // @access  Private/Admin
-exports.createProductAttribute = async (req, res) => {
+exports.createAttribute = async (req, res) => {
   try {
     const { name, values, isActive } = req.body;
 
@@ -134,7 +134,7 @@ exports.createProductAttribute = async (req, res) => {
     }
 
     // Check if attribute name already exists
-    const existingAttribute = await ProductAttribute.findOne({ 
+    const existingAttribute = await Attribute.findOne({ 
       name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } 
     });
 
@@ -145,7 +145,7 @@ exports.createProductAttribute = async (req, res) => {
       });
     }
 
-    const attribute = await ProductAttribute.create({
+    const attribute = await Attribute.create({
       name: sanitizedName,
       values: sanitizedValues,
       isActive: isActive !== undefined ? isActive : true
@@ -153,16 +153,16 @@ exports.createProductAttribute = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Product attribute created successfully',
+      message: 'Attribute created successfully',
       data: { attribute }
     });
   } catch (error) {
-    console.error('Error creating product attribute:', error);
+    console.error('Error creating attribute:', error);
     
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Product attribute with this name already exists'
+        message: 'Attribute with this name already exists'
       });
     }
     
@@ -177,29 +177,29 @@ exports.createProductAttribute = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Error creating product attribute',
+      message: 'Error creating attribute',
       error: error.message
     });
   }
 };
 
-// @desc    Update product attribute
-// @route   PUT /api/v1/admin/product-attributes/:id
+// @desc    Update attribute
+// @route   PUT /api/v1/admin/attributes/:id
 // @access  Private/Admin
-exports.updateProductAttribute = async (req, res) => {
+exports.updateAttribute = async (req, res) => {
   try {
-    const attribute = await ProductAttribute.findById(req.params.id);
+    const attribute = await Attribute.findById(req.params.id);
 
     if (!attribute) {
       return res.status(404).json({
         success: false,
-        message: 'Product attribute not found'
+        message: 'Attribute not found'
       });
     }
 
     // Check if name is being changed and if new name already exists
     if (req.body.name && req.body.name !== attribute.name) {
-      const existingAttribute = await ProductAttribute.findOne({ 
+      const existingAttribute = await Attribute.findOne({ 
         name: { $regex: new RegExp(`^${req.body.name}$`, 'i') },
         _id: { $ne: req.params.id }
       });
@@ -218,11 +218,11 @@ exports.updateProductAttribute = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Product attribute updated successfully',
+      message: 'Attribute updated successfully',
       data: { attribute }
     });
   } catch (error) {
-    console.error('Error updating product attribute:', error);
+    console.error('Error updating attribute:', error);
     
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
@@ -236,48 +236,47 @@ exports.updateProductAttribute = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Product attribute with this name already exists'
+        message: 'Attribute with this name already exists'
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Error updating product attribute',
+      message: 'Error updating attribute',
       error: error.message
     });
   }
 };
 
-// @desc    Delete product attribute
-// @route   DELETE /api/v1/admin/product-attributes/:id
+// @desc    Delete attribute
+// @route   DELETE /api/v1/admin/attributes/:id
 // @access  Private/Admin
-exports.deleteProductAttribute = async (req, res) => {
+exports.deleteAttribute = async (req, res) => {
   try {
-    const attribute = await ProductAttribute.findById(req.params.id);
+    const attribute = await Attribute.findById(req.params.id);
 
     if (!attribute) {
       return res.status(404).json({
         success: false,
-        message: 'Product attribute not found'
+        message: 'Attribute not found'
       });
     }
 
     // TODO: Check if attribute is being used by any products
     // For now, we'll allow deletion but this should be enhanced later
 
-    await ProductAttribute.findByIdAndDelete(req.params.id);
+    await Attribute.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
-      message: 'Product attribute deleted successfully'
+      message: 'Attribute deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting product attribute:', error);
+    console.error('Error deleting attribute:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting product attribute',
+      message: 'Error deleting attribute',
       error: error.message
     });
   }
 };
-

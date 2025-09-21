@@ -111,7 +111,7 @@ exports.createBrand = async (req, res) => {
     const {
       name,
       description,
-      logo,
+      image,
       website,
       isActive,
       displayOrder,
@@ -155,7 +155,7 @@ exports.createBrand = async (req, res) => {
     const brand = new Brand({
       name: sanitizedName,
       description: sanitizedDescription,
-      logo,
+      image,
       website: sanitizedWebsite,
       isActive: isActive !== undefined ? isActive : true,
       displayOrder: sanitizedDisplayOrder,
@@ -204,7 +204,7 @@ exports.updateBrand = async (req, res) => {
     const {
       name,
       description,
-      logo,
+      image,
       website,
       isActive,
       displayOrder,
@@ -238,7 +238,7 @@ exports.updateBrand = async (req, res) => {
     // Update fields
     if (name !== undefined) brand.name = name;
     if (description !== undefined) brand.description = description;
-    if (logo !== undefined) brand.logo = logo;
+    if (image !== undefined) brand.image = image;
     if (website !== undefined) brand.website = website;
     if (isActive !== undefined) brand.isActive = isActive;
     if (displayOrder !== undefined) brand.displayOrder = displayOrder;
