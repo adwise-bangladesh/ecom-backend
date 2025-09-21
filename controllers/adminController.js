@@ -290,6 +290,7 @@ exports.getOrders = async (req, res) => {
     const skip = (page - 1) * limit;
     const status = req.query.status || '';
     const phone = req.query.phone || '';
+    const search = req.query.search || '';
 
     let query = {};
     if (status) {
@@ -297,6 +298,18 @@ exports.getOrders = async (req, res) => {
     }
     if (phone) {
       query['shippingInfo.phone'] = phone;
+    }
+
+    // Add search functionality
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { orderNumber: searchRegex },
+        { 'shippingInfo.name': searchRegex },
+        { 'shippingInfo.email': searchRegex },
+        { 'shippingInfo.phone': searchRegex },
+        { _id: searchRegex } // Search by order ID as well
+      ];
     }
 
     const orders = await Order.find(query)
