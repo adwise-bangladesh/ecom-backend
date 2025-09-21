@@ -124,44 +124,66 @@ exports.createUnit = async (req, res) => {
   try {
     const { name, symbol, isActive } = req.body;
 
-    // Input validation
-    if (!name || !name.trim()) {
+    // Input sanitization and validation
+    const sanitizedName = name?.trim();
+    const sanitizedSymbol = symbol?.trim();
+
+    // Validate required fields
+    if (!sanitizedName || sanitizedName.length < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Unit name is required'
+        message: 'Unit name is required',
+        errors: ['Unit name is required']
       });
     }
 
-    if (!symbol || !symbol.trim()) {
+    if (!sanitizedSymbol || sanitizedSymbol.length < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Unit symbol is required'
+        message: 'Unit symbol is required',
+        errors: ['Unit symbol is required']
       });
     }
 
-    // Sanitize input
-    const sanitizedName = name.trim();
-    const sanitizedSymbol = symbol.trim();
+    // Validate name format
+    if (!/^[a-zA-Z0-9\s\-/°]+$/.test(sanitizedName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unit name contains invalid characters',
+        errors: ['Unit name can only contain letters, numbers, spaces, hyphens, slashes, and degree symbols']
+      });
+    }
 
-    // Check if unit name or symbol already exists
+    // Validate symbol format
+    if (!/^[a-zA-Z0-9°%$€£¥]+$/.test(sanitizedSymbol)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unit symbol contains invalid characters',
+        errors: ['Unit symbol can only contain letters, numbers, and common currency/symbol characters']
+      });
+    }
+
+    // Check if unit name or symbol already exists (case-insensitive)
     const existingUnit = await Unit.findOne({
       $or: [
-        { name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } },
-        { symbol: { $regex: new RegExp(`^${sanitizedSymbol}$`, 'i') } }
+        { name: { $regex: new RegExp(`^${sanitizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+        { symbol: { $regex: new RegExp(`^${sanitizedSymbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
       ]
     });
 
     if (existingUnit) {
+      const conflictField = existingUnit.name.toLowerCase() === sanitizedName.toLowerCase() ? 'name' : 'symbol';
       return res.status(400).json({
         success: false,
-        message: 'Unit with this name or symbol already exists'
+        message: `Unit with this ${conflictField} already exists`,
+        errors: [`Unit with this ${conflictField} already exists`]
       });
     }
 
     const unit = await Unit.create({
       name: sanitizedName,
       symbol: sanitizedSymbol,
-      isActive: isActive !== undefined ? isActive : true
+      isActive: Boolean(isActive !== undefined ? isActive : true)
     });
 
     res.status(201).json({
@@ -171,12 +193,16 @@ exports.createUnit = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating unit:', error);
+    
     if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
         success: false,
-        message: 'Unit with this name already exists'
+        message: `Unit with this ${field} already exists`,
+        errors: [`Unit with this ${field} already exists`]
       });
     }
+    
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -185,10 +211,11 @@ exports.createUnit = async (req, res) => {
         errors: errors
       });
     }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating unit',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };

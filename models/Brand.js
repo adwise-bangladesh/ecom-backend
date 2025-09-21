@@ -5,24 +5,42 @@ const brandSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Brand name is required'],
     trim: true,
-    maxlength: [100, 'Brand name cannot exceed 100 characters']
+    unique: true,
+    maxlength: [100, 'Brand name cannot exceed 100 characters'],
+    minlength: [2, 'Brand name must be at least 2 characters'],
+    validate: {
+      validator: function(v) {
+        return /^[a-zA-Z0-9\s\-&.]+$/.test(v);
+      },
+      message: 'Brand name can only contain letters, numbers, spaces, hyphens, ampersands, and periods'
+    }
   },
   description: {
     type: String,
     trim: true,
-    maxlength: [500, 'Description cannot exceed 500 characters']
+    maxlength: [500, 'Description cannot exceed 500 characters'],
+    default: ''
   },
   image: {
     type: String,
-    default: ''
+    default: '',
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Allow empty
+        return /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(v) || 
+               /^https?:\/\/.+\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i.test(v);
+      },
+      message: 'Image must be a valid base64 data URL or HTTP(S) URL'
+    }
   },
   website: {
     type: String,
     trim: true,
+    default: '',
     validate: {
       validator: function(v) {
         if (!v) return true; // Allow empty website
-        return /^https?:\/\/.+/.test(v);
+        return /^https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(v);
       },
       message: 'Website must be a valid URL starting with http:// or https://'
     }
@@ -33,32 +51,49 @@ const brandSchema = new mongoose.Schema({
   },
   productCount: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'Product count cannot be negative']
   },
   displayOrder: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'Display order cannot be negative']
   },
   seo: {
     title: {
       type: String,
       trim: true,
-      maxlength: [60, 'SEO title cannot exceed 60 characters']
+      maxlength: [60, 'SEO title cannot exceed 60 characters'],
+      default: ''
     },
     description: {
       type: String,
       trim: true,
-      maxlength: [160, 'SEO description cannot exceed 160 characters']
+      maxlength: [160, 'SEO description cannot exceed 160 characters'],
+      default: ''
     },
     keywords: [{
       type: String,
-      trim: true
+      trim: true,
+      maxlength: [50, 'SEO keyword cannot exceed 50 characters']
     }]
   }
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toJSON: { 
+    virtuals: true,
+    transform: function(doc, ret) {
+      delete ret.__v;
+      return ret;
+    }
+  },
+  toObject: { 
+    virtuals: true,
+    transform: function(doc, ret) {
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
 

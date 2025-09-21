@@ -104,51 +104,90 @@ exports.createAttribute = async (req, res) => {
   try {
     const { name, values, isActive } = req.body;
 
-    // Input validation
-    if (!name || !name.trim()) {
+    // Input sanitization and validation
+    const sanitizedName = name?.trim();
+
+    // Validate required fields
+    if (!sanitizedName || sanitizedName.length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Attribute name is required'
+        message: 'Attribute name is required and must be at least 2 characters',
+        errors: ['Attribute name is required and must be at least 2 characters']
       });
     }
 
     if (!values || !Array.isArray(values) || values.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'At least one attribute value is required'
+        message: 'At least one attribute value is required',
+        errors: ['At least one attribute value is required']
       });
     }
 
-    // Sanitize input
-    const sanitizedName = name.trim();
-    const sanitizedValues = values.filter(val => val.value && val.value.trim()).map(val => ({
-      value: val.value.trim(),
-      label: val.label ? val.label.trim() : val.value.trim()
-    }));
+    // Validate name format
+    if (!/^[a-zA-Z0-9\s\-_]+$/.test(sanitizedName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attribute name contains invalid characters',
+        errors: ['Attribute name can only contain letters, numbers, spaces, hyphens, and underscores']
+      });
+    }
+
+    // Sanitize and validate values
+    const sanitizedValues = values
+      .filter(val => val && val.value && val.value.trim())
+      .map(val => ({
+        value: val.value.trim(),
+        label: val.label ? val.label.trim() : val.value.trim()
+      }))
+      .filter((val, index, arr) => 
+        // Remove duplicates based on value
+        arr.findIndex(v => v.value.toLowerCase() === val.value.toLowerCase()) === index
+      );
 
     if (sanitizedValues.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'At least one valid attribute value is required'
+        message: 'At least one valid attribute value is required',
+        errors: ['At least one valid attribute value is required']
       });
     }
 
-    // Check if attribute name already exists
+    // Validate each value
+    for (const val of sanitizedValues) {
+      if (val.value.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Attribute value cannot exceed 100 characters',
+          errors: ['Attribute value cannot exceed 100 characters']
+        });
+      }
+      if (val.label && val.label.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Attribute label cannot exceed 100 characters',
+          errors: ['Attribute label cannot exceed 100 characters']
+        });
+      }
+    }
+
+    // Check if attribute name already exists (case-insensitive)
     const existingAttribute = await Attribute.findOne({ 
-      name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } 
+      name: { $regex: new RegExp(`^${sanitizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } 
     });
 
     if (existingAttribute) {
       return res.status(400).json({
         success: false,
-        message: 'Attribute with this name already exists'
+        message: 'Attribute with this name already exists',
+        errors: ['Attribute with this name already exists']
       });
     }
 
     const attribute = await Attribute.create({
       name: sanitizedName,
       values: sanitizedValues,
-      isActive: isActive !== undefined ? isActive : true
+      isActive: Boolean(isActive !== undefined ? isActive : true)
     });
 
     res.status(201).json({
@@ -162,7 +201,8 @@ exports.createAttribute = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Attribute with this name already exists'
+        message: 'Attribute with this name already exists',
+        errors: ['Attribute with this name already exists']
       });
     }
     
@@ -178,7 +218,7 @@ exports.createAttribute = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating attribute',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };

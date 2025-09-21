@@ -118,48 +118,100 @@ exports.createBrand = async (req, res) => {
       seo
     } = req.body;
 
-    // Input validation
-    if (!name || !name.trim()) {
+    // Input sanitization and validation
+    const sanitizedName = name?.trim();
+    const sanitizedDescription = description?.trim() || '';
+    const sanitizedImage = image?.trim() || '';
+    const sanitizedWebsite = website?.trim() || '';
+    const sanitizedDisplayOrder = Math.max(0, parseInt(displayOrder) || 0);
+
+    // Validate required fields
+    if (!sanitizedName || sanitizedName.length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Brand name is required'
+        message: 'Brand name is required and must be at least 2 characters',
+        errors: ['Brand name is required and must be at least 2 characters']
       });
     }
 
-    // Sanitize input
-    const sanitizedName = name.trim();
-    const sanitizedDescription = description ? description.trim() : '';
-    const sanitizedWebsite = website ? website.trim() : '';
-    const sanitizedDisplayOrder = parseInt(displayOrder) || 0;
+    // Validate name format
+    if (!/^[a-zA-Z0-9\s\-&.]+$/.test(sanitizedName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Brand name contains invalid characters',
+        errors: ['Brand name can only contain letters, numbers, spaces, hyphens, ampersands, and periods']
+      });
+    }
 
     // Validate website URL if provided
-    if (sanitizedWebsite && !/^https?:\/\/.+/.test(sanitizedWebsite)) {
+    if (sanitizedWebsite && !/^https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(sanitizedWebsite)) {
       return res.status(400).json({
         success: false,
-        message: 'Website must be a valid URL starting with http:// or https://'
+        message: 'Website must be a valid URL starting with http:// or https://',
+        errors: ['Website must be a valid URL starting with http:// or https://']
       });
     }
 
-    // Check if brand name already exists
+    // Validate image URL if provided
+    if (sanitizedImage && !/^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(sanitizedImage) && 
+        !/^https?:\/\/.+\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i.test(sanitizedImage)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image must be a valid base64 data URL or HTTP(S) URL',
+        errors: ['Image must be a valid base64 data URL or HTTP(S) URL']
+      });
+    }
+
+    // Validate SEO data if provided
+    if (seo) {
+      if (seo.title && seo.title.length > 60) {
+        return res.status(400).json({
+          success: false,
+          message: 'SEO title cannot exceed 60 characters',
+          errors: ['SEO title cannot exceed 60 characters']
+        });
+      }
+      if (seo.description && seo.description.length > 160) {
+        return res.status(400).json({
+          success: false,
+          message: 'SEO description cannot exceed 160 characters',
+          errors: ['SEO description cannot exceed 160 characters']
+        });
+      }
+      if (seo.keywords && Array.isArray(seo.keywords)) {
+        for (const keyword of seo.keywords) {
+          if (keyword && keyword.length > 50) {
+            return res.status(400).json({
+              success: false,
+              message: 'SEO keyword cannot exceed 50 characters',
+              errors: ['SEO keyword cannot exceed 50 characters']
+            });
+          }
+        }
+      }
+    }
+
+    // Check if brand name already exists (case-insensitive)
     const existingBrand = await Brand.findOne({ 
-      name: { $regex: new RegExp(`^${sanitizedName}$`, 'i') } 
+      name: { $regex: new RegExp(`^${sanitizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } 
     });
 
     if (existingBrand) {
       return res.status(400).json({
         success: false,
-        message: 'Brand with this name already exists'
+        message: 'Brand with this name already exists',
+        errors: ['Brand with this name already exists']
       });
     }
 
     const brand = new Brand({
       name: sanitizedName,
       description: sanitizedDescription,
-      image,
+      image: sanitizedImage,
       website: sanitizedWebsite,
-      isActive: isActive !== undefined ? isActive : true,
+      isActive: Boolean(isActive !== undefined ? isActive : true),
       displayOrder: sanitizedDisplayOrder,
-      seo
+      seo: seo || {}
     });
 
     await brand.save();
@@ -182,16 +234,18 @@ exports.createBrand = async (req, res) => {
     }
 
     if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
         success: false,
-        message: 'Brand with this name already exists'
+        message: `Brand with this ${field} already exists`,
+        errors: [`Brand with this ${field} already exists`]
       });
     }
 
     res.status(500).json({
       success: false,
       message: 'Error creating brand',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };

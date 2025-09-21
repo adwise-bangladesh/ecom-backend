@@ -143,18 +143,24 @@ exports.createCategory = async (req, res) => {
   try {
     const { name, slug, description, parent, image, isActive = true, showOnHomepage = false, order = 0 } = req.body;
 
+    // Input sanitization and validation
+    const sanitizedName = name?.trim();
+    const sanitizedDescription = description?.trim() || '';
+    const sanitizedImage = image?.trim() || '';
+    const sanitizedOrder = Math.max(0, parseInt(order) || 0);
+
     // Validate required fields
-    if (!name || !name.trim()) {
+    if (!sanitizedName || sanitizedName.length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Category name is required',
-        errors: ['Category name is required']
+        message: 'Category name is required and must be at least 2 characters',
+        errors: ['Category name is required and must be at least 2 characters']
       });
     }
 
-    // Check if category with same name already exists
+    // Check if category with same name already exists (case-insensitive)
     const existingCategory = await Category.findOne({ 
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      name: { $regex: new RegExp(`^${sanitizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } 
     });
 
     if (existingCategory) {
@@ -166,8 +172,9 @@ exports.createCategory = async (req, res) => {
     }
 
     // Validate parent category if provided
-    if (parent) {
-      const parentCategory = await Category.findById(parent);
+    let parentCategory = null;
+    if (parent && mongoose.Types.ObjectId.isValid(parent)) {
+      parentCategory = await Category.findById(parent);
       if (!parentCategory) {
         return res.status(400).json({
           success: false,
@@ -175,22 +182,41 @@ exports.createCategory = async (req, res) => {
           errors: ['Parent category not found']
         });
       }
+      
+      // Prevent circular references
+      if (parentCategory.parent && parentCategory.parent.toString() === parent) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot set category as parent of its own parent',
+          errors: ['Cannot set category as parent of its own parent']
+        });
+      }
     }
 
-    // Use provided slug or generate from name
+    // Generate slug from name if not provided
     const finalSlug = slug && slug.trim() 
       ? slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      : sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    // Check slug availability
+    const existingSlug = await Category.findOne({ slug: finalSlug });
+    if (existingSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category with this slug already exists',
+        errors: ['Category with this slug already exists']
+      });
+    }
 
     const categoryData = {
-      name: name.trim(),
+      name: sanitizedName,
       slug: finalSlug,
-      description: description?.trim() || '',
+      description: sanitizedDescription,
       parent: parent || null,
-      image: image || '',
-      isActive,
-      showOnHomepage,
-      order: parseInt(order) || 0
+      image: sanitizedImage,
+      isActive: Boolean(isActive),
+      showOnHomepage: Boolean(showOnHomepage),
+      order: sanitizedOrder
     };
 
     const category = new Category(categoryData);
@@ -217,17 +243,18 @@ exports.createCategory = async (req, res) => {
     }
 
     if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
         success: false,
-        message: 'Category with this slug already exists',
-        errors: ['Category with this slug already exists']
+        message: `Category with this ${field} already exists`,
+        errors: [`Category with this ${field} already exists`]
       });
     }
 
     res.status(500).json({
       success: false,
       message: 'Failed to create category',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
