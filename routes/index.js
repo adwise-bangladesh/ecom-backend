@@ -13,6 +13,7 @@ const categoryController = require('../controllers/categoryController');
 const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
 const adminController = require('../controllers/adminController');
+const mediaController = require('../controllers/mediaController');
 
 // Import middleware
 const { protect, optionalAuth, rateLimit } = require('../middleware/auth');
@@ -113,6 +114,14 @@ router.post('/admin/attributes', adminAuth, attributeController.createAttribute)
 router.get('/admin/attributes/:id', adminAuth, attributeController.getAttribute);
 router.put('/admin/attributes/:id', adminAuth, attributeController.updateAttribute);
 router.delete('/admin/attributes/:id', adminAuth, attributeController.deleteAttribute);
+
+// Admin routes - Media
+router.get('/admin/media', adminAuth, mediaController.getMediaFiles);
+router.post('/admin/media/upload', adminAuth, mediaController.uploadMediaFiles);
+router.get('/admin/media/stats', adminAuth, mediaController.getMediaStats);
+router.get('/admin/media/:id', adminAuth, mediaController.getMediaFile);
+router.put('/admin/media/:id', adminAuth, mediaController.updateMediaFile);
+router.delete('/admin/media/:id', adminAuth, mediaController.deleteMediaFile);
 
 // Admin routes - Categories
 router.get('/admin/categories', adminAuth, categoryController.getAdminCategories);

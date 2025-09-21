@@ -22,6 +22,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
+// Static file serving for uploaded media
+app.use('/uploads/media', express.static('uploads/media'));
+
 // Routes
 app.use('/api/v1', require('./routes'));
 
