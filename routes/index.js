@@ -30,6 +30,7 @@ const {
   sanitizeInput
 } = require('../middleware/validation');
 const {
+  securityHeaders,
   generalRateLimit,
   authRateLimit,
   adminRateLimit,
@@ -39,6 +40,7 @@ const {
 } = require('../middleware/security');
 
 // Apply global middleware
+router.use(securityHeaders);
 router.use(requestLogger);
 router.use(securityAudit);
 router.use(requestSizeLimit('10mb'));

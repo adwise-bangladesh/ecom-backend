@@ -1,50 +1,68 @@
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+// Note: Using built-in Node.js modules for Railway compatibility
+// const helmet = require('helmet');
+// const rateLimit = require('express-rate-limit');
 
-// Security headers middleware
-exports.securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
+// Security headers middleware (built-in implementation)
+exports.securityHeaders = (req, res, next) => {
+  // Set security headers manually
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  // Content Security Policy
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self'; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self'; " +
+    "font-src 'self'; " +
+    "object-src 'none'; " +
+    "media-src 'self'; " +
+    "frame-src 'none';"
+  );
+  
+  // HSTS (only for HTTPS)
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
-});
+  
+  next();
+};
 
-// Rate limiting for different route types
+// Rate limiting for different route types (built-in implementation)
 exports.createRateLimit = (windowMs, max, message) => {
-  return rateLimit({
-    windowMs,
-    max,
-    message: {
-      success: false,
-      message: message || 'Too many requests. Please try again later.',
-      code: 'RATE_LIMIT_EXCEEDED'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (req, res) => {
-      res.status(429).json({
+  const requests = new Map();
+  
+  return (req, res, next) => {
+    const clientId = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    const windowStart = now - windowMs;
+
+    // Clean old entries
+    if (requests.has(clientId)) {
+      const clientRequests = requests.get(clientId).filter(time => time > windowStart);
+      requests.set(clientId, clientRequests);
+    } else {
+      requests.set(clientId, []);
+    }
+
+    const clientRequests = requests.get(clientId);
+    
+    if (clientRequests.length >= max) {
+      return res.status(429).json({
         success: false,
         message: message || 'Too many requests. Please try again later.',
         code: 'RATE_LIMIT_EXCEEDED',
         retryAfter: Math.ceil(windowMs / 1000)
       });
     }
-  });
+
+    clientRequests.push(now);
+    next();
+  };
 };
 
 // General rate limiting
